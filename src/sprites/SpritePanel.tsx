@@ -29,11 +29,21 @@ type BranchProps = {
 function Thumbnail({ sprite }: { sprite: Sprite }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    const context = ref.current?.getContext('2d')
-    if (!context) return
-    const image = new ImageData(sprite.width, sprite.height)
-    writePixels(sprite.pixels, image.data)
-    context.putImageData(image, 0, 0)
+    const canvas = ref.current
+    if (!canvas) return
+    // A filter can match thousands of sprites at once, and drawing every one of them costs far
+    // more than the handful the panel actually shows: each waits until it is scrolled into view.
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      const context = canvas.getContext('2d')
+      if (!context) return
+      const image = new ImageData(sprite.width, sprite.height)
+      writePixels(sprite.pixels, image.data)
+      context.putImageData(image, 0, 0)
+    })
+    observer.observe(canvas)
+    return () => observer.disconnect()
   }, [sprite])
   return (
     <canvas className="sprites__thumb" ref={ref} width={sprite.width} height={sprite.height} />
@@ -93,7 +103,7 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
 
 export function SpritePanel({ sprites, activeId, loading, skipped, onLoad, onPick }: Props) {
   const [query, setQuery] = useState('')
-  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
   const pickerRef = useRef<HTMLInputElement | null>(null)
   const tree = useMemo(
     () => buildSpriteTree(sprites.filter((sprite) => matchesQuery(sprite, query))),
@@ -101,10 +111,12 @@ export function SpritePanel({ sprites, activeId, loading, skipped, onLoad, onPic
   )
 
   const filtering = query.trim() !== ''
-  // A filtered tree is already the answer to a question: collapsing it would hide the hits.
-  const isOpen = (path: string) => filtering || !closed.has(path)
+  // Folders start closed — a library of a few thousand sprites would otherwise mount a thumbnail
+  // canvas for every one of them at once. A filtered tree is already the answer to a question,
+  // so that one opens.
+  const isOpen = (path: string) => filtering || opened.has(path)
   const toggle = (path: string) =>
-    setClosed((current) => {
+    setOpened((current) => {
       const next = new Set(current)
       if (!next.delete(path)) next.add(path)
       return next
@@ -146,7 +158,11 @@ export function SpritePanel({ sprites, activeId, loading, skipped, onLoad, onPic
           />
         )}
       </div>
-      {skipped > 0 && <p className="sprites__note">{skipped} file(s) skipped</p>}
+      {sprites.length > 0 && (
+        <p className="sprites__note">
+          {sprites.length} sprites{skipped > 0 ? ` · ${skipped} file(s) skipped` : ''}
+        </p>
+      )}
       {sprites.length === 0 && !loading && (
         <p className="sprites__note">
           Pick a folder of .png sprites. Its sub-folders become the tree below.

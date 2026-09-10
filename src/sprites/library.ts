@@ -24,12 +24,16 @@ type Draft = {
   sprites: Sprite[]
 }
 
+// Everything `createImageBitmap` decodes, which is what the sprite loader runs every file
+// through; an animated GIF contributes its first frame.
+export const SPRITE_FILE = /\.(png|gif|webp|bmp|jpe?g)$/i
+
 // `webkitRelativePath` always starts with the picked directory itself; dropping that segment
 // keeps the labels about the structure inside the folder rather than where it happened to live.
 export function splitSpritePath(relativePath: string): { folder: string; name: string } {
   const segments = relativePath.split('/').filter(Boolean)
   const file = segments.pop() ?? relativePath
-  return { folder: segments.slice(1).join('/'), name: file.replace(/\.png$/i, '') }
+  return { folder: segments.slice(1).join('/'), name: file.replace(SPRITE_FILE, '') }
 }
 
 function descend(parent: Draft, name: string): Draft {

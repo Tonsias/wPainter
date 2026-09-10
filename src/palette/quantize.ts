@@ -25,6 +25,26 @@ export function nearestPaletteIndex(r: number, g: number, b: number, colorCount:
   return bestIndex + 1
 }
 
+// Matching is 63 distance tests per pixel and dominates an import, while sprite art repeats a
+// handful of colours over and over — so the answer per colour is remembered across files. The
+// cap keeps a photograph, which does not repeat, from turning this into a second copy of it.
+const MAX_REMEMBERED = 1 << 16
+
+const matched = new Map<number, Map<number, number>>()
+
+function paletteIndexFor(rgb: number, colorCount: number): number {
+  let seen = matched.get(colorCount)
+  if (!seen) {
+    seen = new Map()
+    matched.set(colorCount, seen)
+  }
+  const hit = seen.get(rgb)
+  if (hit !== undefined) return hit
+  const index = nearestPaletteIndex(rgb >>> 16, (rgb >>> 8) & 0xff, rgb & 0xff, colorCount)
+  if (seen.size < MAX_REMEMBERED) seen.set(rgb, index)
+  return index
+}
+
 export function quantizeRgba(rgba: Uint8ClampedArray, colorCount: number): Uint8Array {
   const pixels = new Uint8Array(rgba.length / 4)
   for (let i = 0; i < pixels.length; i += 1) {
@@ -32,7 +52,10 @@ export function quantizeRgba(rgba: Uint8ClampedArray, colorCount: number): Uint8
     pixels[i] =
       rgba[offset + 3] < ALPHA_THRESHOLD
         ? EMPTY_PIXEL
-        : nearestPaletteIndex(rgba[offset], rgba[offset + 1], rgba[offset + 2], colorCount)
+        : paletteIndexFor(
+            (rgba[offset] << 16) | (rgba[offset + 1] << 8) | rgba[offset + 2],
+            colorCount,
+          )
   }
   return pixels
 }

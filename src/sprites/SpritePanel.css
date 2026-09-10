@@ -59,6 +59,13 @@
   border-left: 1px solid var(--color-neutral-300);
 }
 
+/* Rows off-screen are skipped by the browser instead of being laid out: a filter that matches
+   thousands of sprites otherwise pays for every row it renders below the fold. */
+.sprites__branch > li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+}
+
 .sprites__folder,
 .sprites__leaf {
   display: flex;
