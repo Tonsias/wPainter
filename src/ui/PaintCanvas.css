@@ -1,12 +1,10 @@
-/* The fixed window the artwork is looked at through: it never grows with the zoom, the canvas
-   inside it does, and this box scrolls instead. */
+/* The fixed window the artwork is looked at through: it never grows with the zoom, and the
+   canvas inside is positioned freely so a wheel zoom can pin any point under the cursor. */
 .paint-view {
   position: relative;
-  display: grid;
-  overflow: auto;
+  overflow: hidden;
   width: 100%;
   height: 100%;
-  overscroll-behavior: contain;
   touch-action: none;
 }
 
@@ -15,10 +13,9 @@
 }
 
 .paint {
-  position: relative;
-  /* Auto margins centre a canvas smaller than the view and collapse to zero once it is larger,
-     which `place-content: center` would not — that clips the top-left out of scroll range. */
-  margin: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
   /* 8px squares are a device constant, not a spacing token: they read as "transparent" at any
      zoom precisely because they do not scale with the art. */
   background-image: conic-gradient(

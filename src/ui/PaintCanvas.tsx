@@ -9,23 +9,29 @@ import './PaintCanvas.css'
 import { writePixels, writeRgba } from '../document/composite.ts'
 import type { PaintDocument } from '../document/document.ts'
 import { stamp, type PixelBuffer } from '../document/paint.ts'
-import { GRID_MIN_ZOOM, zoomStep, type Zoom } from './zoom.ts'
+import {
+  GRID_MIN_ZOOM,
+  anchoredOffset,
+  centeredOffset,
+  clampOffset,
+  zoomStep,
+  type Offset,
+  type Zoom,
+} from './zoom.ts'
 
 export type Point = { readonly x: number; readonly y: number }
 
 type StampPreview = { readonly buffer: PixelBuffer; readonly at: Point }
 
+type Extent = { readonly width: number; readonly height: number }
+
 type Pan = {
   readonly pointerId: number
   readonly clientX: number
   readonly clientY: number
-  readonly scrollLeft: number
-  readonly scrollTop: number
+  readonly offset: Offset
+  readonly view: Extent
 }
-
-// The document point the wheel gesture pointed at, kept until the new zoom is laid out so the
-// scroll can be corrected to leave that point under the cursor.
-type ZoomAnchor = Point & { readonly clientX: number; readonly clientY: number }
 
 type Props = {
   doc: PaintDocument
@@ -61,10 +67,20 @@ export function PaintCanvas({
   const artRef = useRef<HTMLCanvasElement>(null)
   const previewRef = useRef<HTMLCanvasElement>(null)
   const panRef = useRef<Pan | null>(null)
-  const anchorRef = useRef<ZoomAnchor | null>(null)
+  // Where in the viewport the wheel pointed, kept until the new zoom is laid out and the offset
+  // around that point can be corrected.
+  const anchorRef = useRef<Offset | null>(null)
+  const [offset, setOffset] = useState<Offset>({ x: 0, y: 0 })
+  const offsetRef = useRef<Offset>(offset)
+  const zoomRef = useRef<Zoom>(zoom)
   const [panning, setPanning] = useState(false)
   const art = useImageData(doc.width, doc.height)
   const ghost = useImageData(doc.width, doc.height)
+
+  const place = (next: Offset) => {
+    offsetRef.current = next
+    setOffset(next)
+  }
 
   useEffect(() => {
     const context = artRef.current?.getContext('2d')
@@ -89,41 +105,47 @@ export function PaintCanvas({
     context.putImageData(ghost, 0, 0)
   }, [preview, ghost, doc.width, doc.height])
 
+  useLayoutEffect(() => {
+    const view = viewRef.current?.getBoundingClientRect()
+    if (!view) return
+    const scale = zoomRef.current
+    const next = centeredOffset({ width: doc.width * scale, height: doc.height * scale }, view)
+    offsetRef.current = next
+    setOffset(next)
+  }, [doc.width, doc.height])
+
+  useLayoutEffect(() => {
+    const from = zoomRef.current
+    zoomRef.current = zoom
+    const anchor = anchorRef.current
+    anchorRef.current = null
+    const view = viewRef.current?.getBoundingClientRect()
+    if (!view || from === zoom) return
+    // No anchor means the zoom came from a button rather than the wheel, and the viewport centre
+    // is then the point the user was looking at.
+    const local = anchor ?? { x: view.width / 2, y: view.height / 2 }
+    const content = { width: doc.width * zoom, height: doc.height * zoom }
+    const next = clampOffset(anchoredOffset(offsetRef.current, local, from, zoom), content, view)
+    offsetRef.current = next
+    setOffset(next)
+  }, [zoom, doc.width, doc.height])
+
   useEffect(() => {
     const view = viewRef.current
-    const paint = paintRef.current
-    if (!view || !paint) return
+    if (!view) return
     // Registered by hand: React's onWheel is passive, so preventDefault there cannot stop the
     // page from scrolling or the browser from zooming under the gesture.
     const onWheel = (event: WheelEvent) => {
       event.preventDefault()
-      const next = zoomStep(zoom, -event.deltaY)
-      if (next === zoom) return
-      const rect = paint.getBoundingClientRect()
-      anchorRef.current = {
-        x: (event.clientX - rect.left) / zoom,
-        y: (event.clientY - rect.top) / zoom,
-        clientX: event.clientX,
-        clientY: event.clientY,
-      }
+      const next = zoomStep(zoomRef.current, -event.deltaY)
+      if (next === zoomRef.current) return
+      const rect = view.getBoundingClientRect()
+      anchorRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top }
       onZoomChange(next)
     }
     view.addEventListener('wheel', onWheel, { passive: false })
     return () => view.removeEventListener('wheel', onWheel)
-  }, [zoom, onZoomChange])
-
-  useLayoutEffect(() => {
-    const anchor = anchorRef.current
-    anchorRef.current = null
-    const view = viewRef.current
-    const paint = paintRef.current
-    if (!anchor || !view || !paint) return
-    const rect = view.getBoundingClientRect()
-    // offsetLeft/Top carry the centring margin the view gives a canvas smaller than itself, and
-    // are scroll-independent — the scroll position being solved for cannot appear on both sides.
-    view.scrollLeft = paint.offsetLeft + anchor.x * zoom - (anchor.clientX - rect.left)
-    view.scrollTop = paint.offsetTop + anchor.y * zoom - (anchor.clientY - rect.top)
-  }, [zoom])
+  }, [onZoomChange])
 
   const pointFrom = (event: ReactPointerEvent<HTMLDivElement>): Point => {
     const rect = paintRef.current?.getBoundingClientRect()
@@ -153,12 +175,13 @@ export function PaintCanvas({
       onPointerDown={(event) => {
         if (event.button !== 2) return
         const view = event.currentTarget
+        const rect = view.getBoundingClientRect()
         panRef.current = {
           pointerId: event.pointerId,
           clientX: event.clientX,
           clientY: event.clientY,
-          scrollLeft: view.scrollLeft,
-          scrollTop: view.scrollTop,
+          offset: offsetRef.current,
+          view: { width: rect.width, height: rect.height },
         }
         setPanning(true)
         onHoverChange(null)
@@ -169,8 +192,16 @@ export function PaintCanvas({
       onPointerMove={(event) => {
         const pan = panRef.current
         if (!pan) return
-        event.currentTarget.scrollLeft = pan.scrollLeft - (event.clientX - pan.clientX)
-        event.currentTarget.scrollTop = pan.scrollTop - (event.clientY - pan.clientY)
+        place(
+          clampOffset(
+            {
+              x: pan.offset.x + (event.clientX - pan.clientX),
+              y: pan.offset.y + (event.clientY - pan.clientY),
+            },
+            { width: doc.width * zoom, height: doc.height * zoom },
+            pan.view,
+          ),
+        )
       }}
       onPointerUp={endPan}
       onPointerCancel={endPan}
@@ -180,7 +211,13 @@ export function PaintCanvas({
       <div
         className="paint"
         ref={paintRef}
-        style={{ width: doc.width * zoom, height: doc.height * zoom }}
+        style={{
+          width: doc.width * zoom,
+          height: doc.height * zoom,
+          // Rounded so the artwork lands on whole pixels: a fractional offset softens exactly the
+          // edges `image-rendering: pixelated` is here to keep hard.
+          transform: `translate(${Math.round(offset.x)}px, ${Math.round(offset.y)}px)`,
+        }}
         onPointerDown={(event) => {
           if (event.button !== 0) return
           // Capture keeps a drag that wanders off the canvas connected to this element, so the
