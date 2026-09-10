@@ -15,10 +15,14 @@ const IN_FLIGHT = 24
 
 type SpriteLoad = { sprites: Sprite[]; skipped: number }
 
-async function readSprite(file: File): Promise<Sprite | null> {
+// A file paired with where it sits inside the picked folder: a directory handle's files know
+// nothing of their own path, and `webkitRelativePath` is read-only, so the pair is what both
+// ways of choosing a folder can produce.
+export type SpriteFile = { readonly file: File; readonly path: string }
+
+async function readSprite({ file, path }: SpriteFile): Promise<Sprite | null> {
   try {
     const image = await decodeImageFile(file)
-    const path = file.webkitRelativePath || file.name
     const { folder, name } = splitSpritePath(path)
     return {
       id: `${path}:${file.size}`,
@@ -35,8 +39,8 @@ async function readSprite(file: File): Promise<Sprite | null> {
   }
 }
 
-export async function loadSprites(files: readonly File[]): Promise<SpriteLoad> {
-  const images = files.filter((file) => SPRITE_FILE.test(file.name))
+export async function loadSprites(files: readonly SpriteFile[]): Promise<SpriteLoad> {
+  const images = files.filter(({ file }) => SPRITE_FILE.test(file.name))
   const sprites: Sprite[] = []
   let pixels = 0
   for (let start = 0; start < images.length; start += IN_FLIGHT) {
