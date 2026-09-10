@@ -12,6 +12,21 @@ No human writes code here. Every line is produced by an LLM (primarily Claude), 
 - **Automate over repeating.** Anything otherwise re-derived or re-run by hand belongs in a workflow (`.github/workflows/`) or an npm script.
 - **Comment budget.** Keep: a constraint, a trade-off, an external requirement, an invariant a reader could break, or why the obvious alternative was rejected. Delete: any retelling of the code beneath it, any issue-number chronicle, any doc comment on a non-exported symbol, any repetition of a decision already stated elsewhere. An exported symbol gets at most one line unless the non-derivable part demonstrably needs more. `npm run comment-budget` is the CI tripwire for this.
 
+## Domain
+
+The app produces PNG templates for wplace.live, so the palette is an external requirement, not a
+design choice. `src/palette/wplace.ts` holds all 63 placeable colours in the game's own order:
+indices 0-30 are the free ones, 31-62 premium. wplace's 64th palette slot is "transparent", which
+is the eraser here rather than a swatch.
+
+The list was cross-checked against three public palette references in September 2026 (they agree
+on every hex except Teal, where two of three give `#10aea6`). If wplace ever changes its palette,
+this array is the only place that has to move.
+
+A pixel is stored as *palette index + 1*, so `0` — what a fresh `Uint8Array` is full of — already
+means "nothing painted". A document therefore cannot represent a colour wplace does not have, and
+that is the point: it removes the need to validate before export.
+
 ## Code conventions (optimized for LLM reading)
 
 The cost that matters is how many files an LLM must read to change something safely. Minimize it.
