@@ -8,7 +8,16 @@ export type PixelBuffer = {
 
 // A square nib, offset so odd sizes centre on the cursor and even sizes lean up-left — the
 // convention every pixel editor uses, and the only one that keeps size 1 exactly on the cursor.
-export function paintDot(target: PixelBuffer, x: number, y: number, size: number, value: number) {
+// `protect` is a colour the nib refuses to paint over, which is what lets an outline pass run
+// after the colour it surrounds without eating into it.
+export function paintDot(
+  target: PixelBuffer,
+  x: number,
+  y: number,
+  size: number,
+  value: number,
+  protect?: number,
+) {
   const start = -Math.floor((size - 1) / 2)
   for (let dy = 0; dy < size; dy += 1) {
     const py = y + start + dy
@@ -16,20 +25,20 @@ export function paintDot(target: PixelBuffer, x: number, y: number, size: number
     for (let dx = 0; dx < size; dx += 1) {
       const px = x + start + dx
       if (px < 0 || px >= target.width) continue
-      target.pixels[py * target.width + px] = value
+      const index = py * target.width + px
+      if (target.pixels[index] === protect) continue
+      target.pixels[index] = value
     }
   }
 }
 
 // Bresenham, so a fast drag paints a connected line instead of a dotted trail of pointer events.
-export function paintLine(
-  target: PixelBuffer,
+function walkLine(
   fromX: number,
   fromY: number,
   toX: number,
   toY: number,
-  size: number,
-  value: number,
+  visit: (x: number, y: number) => void,
 ) {
   let x = fromX
   let y = fromY
@@ -39,7 +48,7 @@ export function paintLine(
   const deltaY = -Math.abs(toY - fromY)
   let error = deltaX + deltaY
   for (;;) {
-    paintDot(target, x, y, size, value)
+    visit(x, y)
     if (x === toX && y === toY) return
     const doubled = 2 * error
     if (doubled >= deltaY) {
@@ -51,6 +60,37 @@ export function paintLine(
       y += stepY
     }
   }
+}
+
+export function paintLine(
+  target: PixelBuffer,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  size: number,
+  value: number,
+) {
+  walkLine(fromX, fromY, toX, toY, (x, y) => paintDot(target, x, y, size, value))
+}
+
+// A nib that carries its own one-pixel border: the edge goes down first and never touches a
+// pixel already holding the fill, so the border of one step cannot eat the core of the last —
+// which is the whole reason a dragged stroke stays a clean line inside an unbroken outline.
+export function paintOutlineLine(
+  target: PixelBuffer,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  size: number,
+  fill: number,
+  edge: number,
+) {
+  walkLine(fromX, fromY, toX, toY, (x, y) => {
+    paintDot(target, x, y, size + 2, edge, fill)
+    paintDot(target, x, y, size, fill)
+  })
 }
 
 // Scanline flood fill: an explicit stack rather than recursion, which blows the call stack on a

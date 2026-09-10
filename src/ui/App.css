@@ -99,7 +99,6 @@ button:disabled {
 
 .app {
   display: flex;
-  flex-direction: column;
   /* The editor is a single screen: nothing here may push the page into a scrollbar. */
   height: 100dvh;
   overflow: hidden;
@@ -109,21 +108,8 @@ button:disabled {
   background: var(--color-bg);
 }
 
-.app__bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-2) var(--space-6);
-  border-bottom: 1px solid var(--color-divider);
-}
-
 .app__mark {
   font: 26px var(--font-heading);
-}
-
-.app__spacer {
-  flex: 1;
 }
 
 .app__main {
@@ -241,11 +227,6 @@ button:disabled {
 .app__size .btn {
   height: 30px;
   padding: 0 12px;
-}
-
-/* A label styled as a button, because a file input cannot be triggered from one without a ref. */
-.app__file input {
-  display: none;
 }
 
 .app__error {

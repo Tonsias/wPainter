@@ -12,16 +12,24 @@ import {
   type PaintDocument,
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
-import { floodFill, paintLine, stamp, stampOrigin, type PixelBuffer } from '../document/paint.ts'
+import {
+  floodFill,
+  paintLine,
+  paintOutlineLine,
+  stamp,
+  stampOrigin,
+  type PixelBuffer,
+} from '../document/paint.ts'
 import { clampRect, movePixels, rectBetween, shiftRect, type Rect } from '../document/selection.ts'
-import { PalettePanel } from '../palette/PalettePanel.tsx'
+import { PalettePanel, type ColorSlot } from '../palette/PalettePanel.tsx'
 import { quantizeRgba, remapPixels, remapTable } from '../palette/quantize.ts'
 import { EMPTY_PIXEL, FREE_COLOR_COUNT, WPLACE_COLORS } from '../palette/wplace.ts'
 import { SpritePanel } from '../sprites/SpritePanel.tsx'
 import { loadSprites } from '../sprites/loadSprites.ts'
 import type { Sprite } from '../sprites/library.ts'
 import { PaintCanvas, type Point } from './PaintCanvas.tsx'
-import { BRUSH_SIZES, TOOLS, TOOL_KEYS, TOOL_LABELS, type BrushSize, type Tool } from './tools.ts'
+import { Toolbar } from './Toolbar.tsx'
+import { TOOL_KEYS, type BrushSize, type Tool } from './tools.ts'
 import { ZOOMS, fitZoom, type Zoom } from './zoom.ts'
 
 const DEFAULT_SIZE = 128
@@ -35,6 +43,9 @@ export function App() {
   const [history, setHistory] = useState<History>(EMPTY_HISTORY)
   const [tool, setTool] = useState<Tool>('brush')
   const [colorPixel, setColorPixel] = useState(1)
+  // White by default: an outline in the same colour as its fill would not be an outline.
+  const [edgePixel, setEdgePixel] = useState(5)
+  const [slot, setSlot] = useState<ColorSlot>('main')
   const [brushSize, setBrushSize] = useState<BrushSize>(1)
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
@@ -55,6 +66,16 @@ export function App() {
   // A move reads from the layer as it stood when the drag began; `delta` survives the drag so
   // the marquee can follow the pixels once the pointer is released.
   const moveRef = useRef<{ source: Uint8Array; region: Rect | null; delta: Point } | null>(null)
+
+  const pickTool = useCallback((next: Tool) => {
+    setTool(next)
+    // The edge slot exists only while the outline brush is in hand; leaving it selected would
+    // point the palette at a colour the panel no longer shows.
+    if (next !== 'outline') setSlot('main')
+  }, [])
+
+  const setSlotColor = (pixel: number) =>
+    slot === 'edge' ? setEdgePixel(pixel) : setColorPixel(pixel)
 
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
@@ -116,7 +137,7 @@ export function App() {
     if (tool === 'picker') {
       if (!inside) return
       const value = layer.pixels[point.y * doc.width + point.x]
-      if (value !== EMPTY_PIXEL) setColorPixel(remap[value])
+      if (value !== EMPTY_PIXEL) setSlotColor(remap[value])
       return
     }
 
@@ -162,6 +183,9 @@ export function App() {
         stampOrigin(point.x, stampBuffer.width),
         stampOrigin(point.y, stampBuffer.height),
       )
+    } else if (tool === 'outline') {
+      const from = lastRef.current ?? point
+      paintOutlineLine(target, from.x, from.y, point.x, point.y, brushSize, colorPixel, edgePixel)
     } else {
       const from = lastRef.current ?? point
       const value = tool === 'eraser' ? EMPTY_PIXEL : colorPixel
@@ -231,85 +255,32 @@ export function App() {
         return
       }
       const next = TOOL_KEYS[key]
-      if (next) setTool(next)
+      if (next) pickTool(next)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [stepHistory])
+  }, [stepHistory, pickTool])
 
   const clampSide = (value: number) =>
     Math.min(Math.max(Math.round(value) || 1, 1), MAX_CANVAS_SIDE)
 
   return (
     <div className="app">
-      <header className="app__bar">
-        <span className="app__mark">wPainter</span>
-        <div className="segment">
-          {TOOLS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={`segment__option${option === tool ? ' segment__option--active' : ''}`}
-              onClick={() => setTool(option)}
-            >
-              {TOOL_LABELS[option]}
-            </button>
-          ))}
-        </div>
-        <div className="segment">
-          {BRUSH_SIZES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              title={`Brush ${option} px`}
-              className={`segment__option${option === brushSize ? ' segment__option--active' : ''}`}
-              onClick={() => setBrushSize(option)}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <span className="app__spacer" />
-        <button
-          type="button"
-          className="btn"
-          disabled={history.past.length === 0}
-          onClick={() => stepHistory('undo')}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={history.future.length === 0}
-          onClick={() => stepHistory('redo')}
-        >
-          Redo
-        </button>
-        <label className="btn app__file">
-          Import PNG
-          <input
-            type="file"
-            accept="image/png"
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              if (file) void importPng(file)
-              event.target.value = ''
-            }}
-          />
-        </label>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={() =>
-            void exportPng(doc, 'wplace-template.png').catch(() =>
-              setError('The export could not be written.'),
-            )
-          }
-        >
-          Export PNG
-        </button>
-      </header>
+      <Toolbar
+        tool={tool}
+        brushSize={brushSize}
+        canUndo={history.past.length > 0}
+        canRedo={history.future.length > 0}
+        onTool={pickTool}
+        onBrushSize={setBrushSize}
+        onHistory={stepHistory}
+        onImport={(file) => void importPng(file)}
+        onExport={() =>
+          void exportPng(doc, 'wplace-template.png').catch(() =>
+            setError('The export could not be written.'),
+          )
+        }
+      />
 
       <main className="app__main">
         <section className="app__stage">
@@ -411,7 +382,14 @@ export function App() {
           </label>
 
           <h2 className="app__panel-title">Palette</h2>
-          <PalettePanel value={colorPixel} colorCount={colorCount} onChange={setColorPixel} />
+          <PalettePanel
+            main={colorPixel}
+            edge={tool === 'outline' ? edgePixel : null}
+            slot={slot}
+            colorCount={colorCount}
+            onSlot={setSlot}
+            onChange={setSlotColor}
+          />
 
           <h2 className="app__panel-title">Layers</h2>
           <LayerPanel doc={doc} onChange={structural} />
@@ -432,7 +410,7 @@ export function App() {
             }}
             onPick={(picked) => {
               setSpriteId(picked.id)
-              setTool('stamp')
+              pickTool('stamp')
             }}
           />
         </aside>

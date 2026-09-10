@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { floodFill, paintDot, paintLine, stamp, stampOrigin, type PixelBuffer } from './paint.ts'
+import {
+  floodFill,
+  paintDot,
+  paintLine,
+  paintOutlineLine,
+  stamp,
+  stampOrigin,
+  type PixelBuffer,
+} from './paint.ts'
 
 const buffer = (width: number, height: number, fill = 0): PixelBuffer => ({
   width,
@@ -75,5 +83,31 @@ describe('stampOrigin', () => {
   it('centres the sprite on the cursor', () => {
     expect(stampOrigin(10, 4)).toBe(8)
     expect(stampOrigin(10, 1)).toBe(10)
+  })
+})
+
+describe('paintOutlineLine', () => {
+  it('rings a single dot with the edge colour', () => {
+    const target = buffer(3, 3)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    expect([...target.pixels]).toEqual([4, 4, 4, 4, 7, 4, 4, 4, 4])
+  })
+
+  it('keeps the fill unbroken along a dragged stroke', () => {
+    const target = buffer(5, 3)
+    paintOutlineLine(target, 1, 1, 3, 1, 1, 7, 4)
+    expect([...target.pixels]).toEqual([4, 4, 4, 4, 4, 4, 7, 7, 7, 4, 4, 4, 4, 4, 4])
+  })
+
+  it('never lets the edge overwrite fill that is already down', () => {
+    const target = buffer(3, 3, 7)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    expect([...target.pixels]).toEqual([7, 7, 7, 7, 7, 7, 7, 7, 7])
+  })
+
+  it('lets the fill overwrite anything, edge colour included', () => {
+    const target = buffer(3, 3, 4)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    expect(target.pixels[4]).toBe(7)
   })
 })

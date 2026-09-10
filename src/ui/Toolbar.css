@@ -1,0 +1,43 @@
+/* The rail down the left: everything that used to sit in a top bar, stacked so the canvas gets
+   the full height of the window instead of paying for a header. */
+.toolbar {
+  display: flex;
+  flex: none;
+  width: 168px;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  background: var(--color-neutral-100);
+  border-right: 1px solid var(--color-divider);
+}
+
+.segment--stack {
+  flex-direction: column;
+}
+
+.toolbar__spacer {
+  flex: 1;
+  min-height: var(--space-2);
+}
+
+.toolbar__pair {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.toolbar__pair .btn {
+  flex: 1;
+  padding: 0;
+}
+
+/* A label styled as a button, because a file input cannot be triggered from one without a ref. */
+.toolbar__file {
+  justify-content: center;
+}
+
+.toolbar__file input {
+  display: none;
+}

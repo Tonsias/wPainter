@@ -1,8 +1,9 @@
-export const TOOLS = ['brush', 'eraser', 'fill', 'picker', 'stamp', 'select', 'move'] as const
+export const TOOLS = ['brush', 'outline', 'eraser', 'fill', 'picker', 'stamp', 'select', 'move'] as const
 export type Tool = (typeof TOOLS)[number]
 
 export const TOOL_LABELS: Record<Tool, string> = {
   brush: 'Brush',
+  outline: 'Outline',
   eraser: 'Eraser',
   fill: 'Fill',
   picker: 'Pick',
@@ -14,6 +15,7 @@ export const TOOL_LABELS: Record<Tool, string> = {
 // Single-key shortcuts, matched against `event.key` lowercased.
 export const TOOL_KEYS: Record<string, Tool> = {
   b: 'brush',
+  o: 'outline',
   e: 'eraser',
   f: 'fill',
   i: 'picker',
