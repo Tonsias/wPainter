@@ -13,6 +13,7 @@ import {
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
 import { floodFill, paintLine, stamp, stampOrigin, type PixelBuffer } from '../document/paint.ts'
+import { clampRect, movePixels, rectBetween, shiftRect, type Rect } from '../document/selection.ts'
 import { PalettePanel } from '../palette/PalettePanel.tsx'
 import { quantizeRgba, remapPixels, remapTable } from '../palette/quantize.ts'
 import { EMPTY_PIXEL, FREE_COLOR_COUNT, WPLACE_COLORS } from '../palette/wplace.ts'
@@ -39,6 +40,7 @@ export function App() {
   const [zoom, setZoom] = useState<Zoom>(4)
   const [showGrid, setShowGrid] = useState(true)
   const [hover, setHover] = useState<Point | null>(null)
+  const [selection, setSelection] = useState<Rect | null>(null)
   const [sprites, setSprites] = useState<readonly Sprite[]>([])
   const [spriteId, setSpriteId] = useState<string | null>(null)
   const [spriteLoad, setSpriteLoad] = useState({ loading: false, skipped: 0 })
@@ -49,6 +51,10 @@ export function App() {
   // A stroke is one undo step: the snapshot is taken on its first point, not on every move.
   const strokeRef = useRef(false)
   const lastRef = useRef<Point | null>(null)
+  const startRef = useRef<Point | null>(null)
+  // A move reads from the layer as it stood when the drag began; `delta` survives the drag so
+  // the marquee can follow the pixels once the pointer is released.
+  const moveRef = useRef<{ source: Uint8Array; region: Rect | null; delta: Point } | null>(null)
 
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
@@ -79,6 +85,7 @@ export function App() {
   // Every change of canvas size — the first mount, a resize, an import — refits the zoom. Picking
   // a zoom by hand is unaffected, because that leaves the document's dimensions alone.
   useEffect(() => {
+    setSelection(null)
     const box = slotRef.current?.getBoundingClientRect()
     if (box) {
       setZoom(fitZoom(doc.width, doc.height, box.width - FRAME_INSET, box.height - FRAME_INSET))
@@ -86,6 +93,22 @@ export function App() {
   }, [doc.width, doc.height])
 
   const paintAt = (point: Point) => {
+    // A selection is view state, not document state: it neither snapshots nor redraws a layer,
+    // and it is drawn on a canvas whose active layer may well be hidden.
+    if (tool === 'select') {
+      const starting = !strokeRef.current
+      strokeRef.current = true
+      if (starting) startRef.current = point
+      const from = startRef.current ?? point
+      const dragged = from.x !== point.x || from.y !== point.y
+      setSelection(
+        dragged
+          ? clampRect(rectBetween(from.x, from.y, point.x, point.y), doc.width, doc.height)
+          : null,
+      )
+      return
+    }
+
     const layer = activeLayer(doc)
     if (!layer || !layer.visible) return
     const inside = point.x >= 0 && point.y >= 0 && point.x < doc.width && point.y < doc.height
@@ -98,17 +121,38 @@ export function App() {
     }
 
     const starting = !strokeRef.current
-    // Fill and stamp act once per press; only brush and eraser follow the drag.
+    // Fill and stamp act once per press; the others follow the drag, off the canvas included.
     if (!starting && (tool === 'fill' || tool === 'stamp')) return
-    if (!inside && tool !== 'brush' && tool !== 'eraser') return
+    if (!inside && (tool === 'fill' || tool === 'stamp')) return
+
     if (starting) {
       snapshot()
       strokeRef.current = true
       lastRef.current = null
+      startRef.current = point
+      if (tool === 'move') {
+        moveRef.current = {
+          source: Uint8Array.from(layer.pixels),
+          region: selection,
+          delta: { x: 0, y: 0 },
+        }
+      }
     }
 
     const target: PixelBuffer = { pixels: layer.pixels, width: doc.width, height: doc.height }
-    if (tool === 'fill') {
+    if (tool === 'move') {
+      const drag = moveRef.current
+      const start = startRef.current
+      if (!drag || !start) return
+      drag.delta = { x: point.x - start.x, y: point.y - start.y }
+      movePixels(
+        target,
+        { pixels: drag.source, width: doc.width, height: doc.height },
+        drag.region,
+        drag.delta.x,
+        drag.delta.y,
+      )
+    } else if (tool === 'fill') {
       floodFill(target, point.x, point.y, colorPixel)
     } else if (tool === 'stamp') {
       if (!stampBuffer) return
@@ -126,6 +170,19 @@ export function App() {
     lastRef.current = point
     // The pixel buffer was mutated in place; a fresh document object is what tells React.
     setDoc((current) => ({ ...current }))
+  }
+
+  const endStroke = () => {
+    const drag = moveRef.current
+    if (drag?.region) {
+      setSelection(
+        clampRect(shiftRect(drag.region, drag.delta.x, drag.delta.y), doc.width, doc.height),
+      )
+    }
+    moveRef.current = null
+    strokeRef.current = false
+    lastRef.current = null
+    startRef.current = null
   }
 
   const structural = (next: PaintDocument) => {
@@ -273,12 +330,10 @@ export function App() {
                       }
                     : null
                 }
+                selection={selection}
                 onZoomChange={setZoom}
                 onStroke={paintAt}
-                onStrokeEnd={() => {
-                  strokeRef.current = false
-                  lastRef.current = null
-                }}
+                onStrokeEnd={endStroke}
                 onHoverChange={setHover}
               />
               <span className="app__resolution">

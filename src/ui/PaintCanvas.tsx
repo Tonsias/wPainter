@@ -9,6 +9,7 @@ import './PaintCanvas.css'
 import { writePixels, writeRgba } from '../document/composite.ts'
 import type { PaintDocument } from '../document/document.ts'
 import { stamp, type PixelBuffer } from '../document/paint.ts'
+import type { Rect } from '../document/selection.ts'
 import {
   GRID_MIN_ZOOM,
   anchoredOffset,
@@ -38,6 +39,7 @@ type Props = {
   zoom: Zoom
   showGrid: boolean
   preview: StampPreview | null
+  selection: Rect | null
   onZoomChange: (zoom: Zoom) => void
   onStroke: (point: Point) => void
   onStrokeEnd: () => void
@@ -57,6 +59,7 @@ export function PaintCanvas({
   zoom,
   showGrid,
   preview,
+  selection,
   onZoomChange,
   onStroke,
   onStrokeEnd,
@@ -245,6 +248,17 @@ export function PaintCanvas({
           width={doc.width}
           height={doc.height}
         />
+        {selection && (
+          <div
+            className="paint__marquee"
+            style={{
+              left: selection.x * zoom,
+              top: selection.y * zoom,
+              width: selection.width * zoom,
+              height: selection.height * zoom,
+            }}
+          />
+        )}
         {showGrid && zoom >= GRID_MIN_ZOOM && (
           <div className="paint__grid" style={{ backgroundSize: `${zoom}px ${zoom}px` }} />
         )}

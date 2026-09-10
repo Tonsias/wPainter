@@ -51,3 +51,12 @@
     linear-gradient(to bottom, rgb(0 0 0 / 16%) 1px, transparent 1px);
   pointer-events: none;
 }
+
+/* Two strokes of opposite lightness, so the marquee stays visible over black art as well as
+   over white — a single dashed border disappears into one of them. */
+.paint__marquee {
+  position: absolute;
+  border: 1px dashed #fff;
+  outline: 1px dashed #000;
+  pointer-events: none;
+}

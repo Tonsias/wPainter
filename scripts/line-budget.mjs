@@ -14,7 +14,11 @@ const SRC_ROOT = join(import.meta.dirname, '..', 'src');
 
 // Per-directory overrides. A directory absent from this map gets DEFAULT_CEILING; add an entry
 // (with a one-line reason) when a feature genuinely needs more than that.
-const CEILINGS = new Map([]);
+const CEILINGS = new Map([
+  // The canvas host is where pan, wheel zoom, the stamp ghost and the selection marquee all
+  // land, and the toolbar grows a control per tool; 1200 left no room for the next one.
+  ['ui', { ceiling: 1400, reason: 'canvas host plus a toolbar that grows with every tool' }],
+]);
 
 // Applies to every top-level directory under src/ without its own entry above, and to `(root)`
 // (the files directly under src/, in no feature directory).
