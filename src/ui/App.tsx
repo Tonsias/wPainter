@@ -21,7 +21,7 @@ import { loadSprites } from '../sprites/loadSprites.ts'
 import type { Sprite } from '../sprites/library.ts'
 import { PaintCanvas, type Point } from './PaintCanvas.tsx'
 import { BRUSH_SIZES, TOOLS, TOOL_KEYS, TOOL_LABELS, type BrushSize, type Tool } from './tools.ts'
-import { ZOOMS, fitZoom, zoomStep, type Zoom } from './zoom.ts'
+import { ZOOMS, fitZoom, type Zoom } from './zoom.ts'
 
 const DEFAULT_SIZE = 128
 
@@ -258,39 +258,29 @@ export function App() {
         <section className="app__stage">
           <div className="app__frame-slot" ref={slotRef}>
             <div className="app__frame-box">
-              <div
-                className="app__canvas-host"
-                onWheel={(event) => {
-                  // Ctrl+wheel is the browser's own zoom gesture; claiming it here keeps a plain
-                  // wheel free to scroll a canvas larger than its host.
-                  if (!event.ctrlKey) return
-                  event.preventDefault()
-                  setZoom((current) => zoomStep(current, -event.deltaY))
+              <PaintCanvas
+                doc={doc}
+                zoom={zoom}
+                showGrid={showGrid}
+                preview={
+                  tool === 'stamp' && stampBuffer && hover
+                    ? {
+                        buffer: stampBuffer,
+                        at: {
+                          x: stampOrigin(hover.x, stampBuffer.width),
+                          y: stampOrigin(hover.y, stampBuffer.height),
+                        },
+                      }
+                    : null
+                }
+                onZoomChange={setZoom}
+                onStroke={paintAt}
+                onStrokeEnd={() => {
+                  strokeRef.current = false
+                  lastRef.current = null
                 }}
-              >
-                <PaintCanvas
-                  doc={doc}
-                  zoom={zoom}
-                  showGrid={showGrid}
-                  preview={
-                    tool === 'stamp' && stampBuffer && hover
-                      ? {
-                          buffer: stampBuffer,
-                          at: {
-                            x: stampOrigin(hover.x, stampBuffer.width),
-                            y: stampOrigin(hover.y, stampBuffer.height),
-                          },
-                        }
-                      : null
-                  }
-                  onStroke={paintAt}
-                  onStrokeEnd={() => {
-                    strokeRef.current = false
-                    lastRef.current = null
-                  }}
-                  onHoverChange={setHover}
-                />
-              </div>
+                onHoverChange={setHover}
+              />
               <span className="app__resolution">
                 {doc.width}×{doc.height}
                 {hover ? ` · ${hover.x}, ${hover.y}` : ''}

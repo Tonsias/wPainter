@@ -40,55 +40,81 @@
   color: var(--color-neutral-700);
 }
 
-.sprites__group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sprites__folder {
-  margin: var(--space-2) 0 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-}
-
-.sprites__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
-  gap: 4px;
-}
-
-.sprites__item {
+/* One level of nesting per branch: the indent and the guide line come from the DOM depth, so a
+   tree of any depth stays readable without a per-row indent calculation. */
+.sprites__branch {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  align-items: center;
-  padding: 4px;
-  background: var(--color-neutral-200);
-  border: 1px solid transparent;
-  border-radius: 10px;
+  /* No width of its own: a nested branch is indented, and 100% plus that indent is exactly what
+     pushes the panel into a horizontal scrollbar. */
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.sprites__item--active {
+.sprites__branch .sprites__branch {
+  margin-left: 9px;
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-neutral-300);
+}
+
+.sprites__folder,
+.sprites__leaf {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.sprites__folder:hover,
+.sprites__leaf:hover {
+  background: var(--color-neutral-200);
+}
+
+.sprites__folder {
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+
+.sprites__caret {
+  width: 10px;
+  font-size: 9px;
+  color: var(--color-neutral-700);
+}
+
+.sprites__leaf--active {
   border-color: var(--color-accent);
   background: var(--color-neutral-100);
 }
 
 .sprites__thumb {
-  width: 100%;
-  height: 44px;
+  /* A fixed hit area, not a spacing value: the thumbnail must stay square whatever the sprite is. */
+  width: 22px;
+  height: 22px;
+  flex: none;
   object-fit: contain;
   image-rendering: pixelated;
 }
 
 .sprites__label {
-  max-width: 100%;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  font-size: 10px;
-  color: var(--color-neutral-700);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sprites__count {
+  flex: none;
+  font-size: 10px;
+  color: var(--color-neutral-700);
 }

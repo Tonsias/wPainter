@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupByFolder, matchesQuery, splitSpritePath, type Sprite } from './library.ts'
+import { buildSpriteTree, countSprites, matchesQuery, splitSpritePath, type Sprite } from './library.ts'
 
 const sprite = (folder: string, name: string): Sprite => ({
   id: `${folder}/${name}`,
@@ -24,11 +24,32 @@ describe('splitSpritePath', () => {
   })
 })
 
-describe('groupByFolder', () => {
+describe('buildSpriteTree', () => {
   it('sorts folders and the sprites inside each of them', () => {
-    const grouped = groupByFolder([sprite('b', 'z'), sprite('a', 'y'), sprite('b', 'a')])
-    expect(grouped.map((group) => group.folder)).toEqual(['a', 'b'])
-    expect(grouped[1].sprites.map((item) => item.name)).toEqual(['a', 'z'])
+    const root = buildSpriteTree([sprite('b', 'z'), sprite('a', 'y'), sprite('b', 'a')])
+    expect(root.folders.map((node) => node.name)).toEqual(['a', 'b'])
+    expect(root.folders[1].sprites.map((item) => item.name)).toEqual(['a', 'z'])
+  })
+
+  it('nests a path into one node per segment and keeps the full path on each', () => {
+    const root = buildSpriteTree([sprite('a/b', 'deep'), sprite('a', 'shallow')])
+    const [a] = root.folders
+    expect(a.path).toBe('a')
+    expect(a.sprites.map((item) => item.name)).toEqual(['shallow'])
+    expect(a.folders.map((node) => node.path)).toEqual(['a/b'])
+    expect(a.folders[0].sprites.map((item) => item.name)).toEqual(['deep'])
+  })
+
+  it('keeps a folderless sprite on the root node', () => {
+    expect(buildSpriteTree([sprite('', 'loose')]).sprites).toHaveLength(1)
+  })
+})
+
+describe('countSprites', () => {
+  it('counts the whole subtree, not just the node itself', () => {
+    const root = buildSpriteTree([sprite('a/b', 'one'), sprite('a', 'two'), sprite('', 'three')])
+    expect(countSprites(root)).toBe(3)
+    expect(countSprites(root.folders[0])).toBe(2)
   })
 })
 

@@ -8,9 +8,20 @@ export type Sprite = {
   readonly pixels: Uint8Array
 }
 
-type SpriteFolder = {
-  readonly folder: string
+// The picked directory itself is the root: its `path` and `name` are empty, and only its
+// children carry a folder name.
+export type SpriteNode = {
+  readonly path: string
+  readonly name: string
+  readonly folders: readonly SpriteNode[]
   readonly sprites: readonly Sprite[]
+}
+
+type Draft = {
+  path: string
+  name: string
+  folders: Map<string, Draft>
+  sprites: Sprite[]
 }
 
 // `webkitRelativePath` always starts with the picked directory itself; dropping that segment
@@ -21,19 +32,42 @@ export function splitSpritePath(relativePath: string): { folder: string; name: s
   return { folder: segments.slice(1).join('/'), name: file.replace(/\.png$/i, '') }
 }
 
-export function groupByFolder(sprites: readonly Sprite[]): SpriteFolder[] {
-  const byFolder = new Map<string, Sprite[]>()
-  for (const sprite of sprites) {
-    const bucket = byFolder.get(sprite.folder)
-    if (bucket) bucket.push(sprite)
-    else byFolder.set(sprite.folder, [sprite])
+function descend(parent: Draft, name: string): Draft {
+  const existing = parent.folders.get(name)
+  if (existing) return existing
+  const made: Draft = {
+    path: parent.path ? `${parent.path}/${name}` : name,
+    name,
+    folders: new Map(),
+    sprites: [],
   }
-  return [...byFolder.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([folder, group]) => ({
-      folder,
-      sprites: [...group].sort((a, b) => a.name.localeCompare(b.name)),
-    }))
+  parent.folders.set(name, made)
+  return made
+}
+
+function settle(draft: Draft): SpriteNode {
+  return {
+    path: draft.path,
+    name: draft.name,
+    folders: [...draft.folders.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(settle),
+    sprites: [...draft.sprites].sort((a, b) => a.name.localeCompare(b.name)),
+  }
+}
+
+export function buildSpriteTree(sprites: readonly Sprite[]): SpriteNode {
+  const root: Draft = { path: '', name: '', folders: new Map(), sprites: [] }
+  for (const sprite of sprites) {
+    let node = root
+    for (const segment of sprite.folder.split('/').filter(Boolean)) node = descend(node, segment)
+    node.sprites.push(sprite)
+  }
+  return settle(root)
+}
+
+export function countSprites(node: SpriteNode): number {
+  return node.folders.reduce((sum, child) => sum + countSprites(child), node.sprites.length)
 }
 
 export function matchesQuery(sprite: Sprite, query: string): boolean {
