@@ -225,6 +225,16 @@ export function App() {
     [history, doc],
   )
 
+  const expertExportPng = async (maskFile: File) => {
+    try {
+      const mask = await decodeImageFile(maskFile)
+      await exportPng(doc, 'wplace-template-cutout.png', mask)
+      setError(null)
+    } catch {
+      setError(`${maskFile.name} could not be read as an image.`)
+    }
+  }
+
   const importPng = async (file: File) => {
     try {
       const image = await decodeImageFile(file)
@@ -280,6 +290,7 @@ export function App() {
             setError('The export could not be written.'),
           )
         }
+        onExpertExport={(mask) => void expertExportPng(mask)}
       />
 
       <main className="app__main">

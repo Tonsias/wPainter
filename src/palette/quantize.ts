@@ -2,7 +2,7 @@ import { EMPTY_PIXEL, PALETTE_RGB } from './wplace.ts'
 
 // Below this the source pixel is treated as a hole rather than as a colour to match, so an
 // imported sprite's cut-out background stays a hole instead of becoming near-black.
-const ALPHA_THRESHOLD = 128
+export const ALPHA_THRESHOLD = 128
 
 // Redmean: a weighted RGB distance that tracks perceived difference far better than plain
 // Euclidean RGB, at a fraction of the cost of converting every pixel into a Lab space.

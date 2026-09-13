@@ -1,5 +1,6 @@
 import { EMPTY_PIXEL, PALETTE_RGB } from '../palette/wplace.ts'
 import type { PaintDocument } from './document.ts'
+import { punchMask, type DecodedImage } from './mask.ts'
 
 // Paints over `target` without clearing it, so a caller can stack buffers; holes leave whatever
 // is underneath untouched.
@@ -25,8 +26,6 @@ export function writeRgba(doc: PaintDocument, target: Uint8ClampedArray) {
   }
 }
 
-type DecodedImage = { width: number; height: number; rgba: Uint8ClampedArray }
-
 export async function decodeImageFile(file: Blob): Promise<DecodedImage> {
   const bitmap = await createImageBitmap(file)
   try {
@@ -41,12 +40,13 @@ export async function decodeImageFile(file: Blob): Promise<DecodedImage> {
   }
 }
 
-export async function exportPng(doc: PaintDocument, fileName: string) {
+export async function exportPng(doc: PaintDocument, fileName: string, mask?: DecodedImage) {
   const canvas = new OffscreenCanvas(doc.width, doc.height)
   const context = canvas.getContext('2d')
   if (!context) throw new Error('2D canvas context unavailable')
   const image = context.createImageData(doc.width, doc.height)
   writeRgba(doc, image.data)
+  if (mask) punchMask(image.data, doc.width, doc.height, mask)
   context.putImageData(image, 0, 0)
   const blob = await canvas.convertToBlob({ type: 'image/png' })
   const url = URL.createObjectURL(blob)

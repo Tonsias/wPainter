@@ -11,6 +11,7 @@ type Props = {
   onHistory: (direction: 'undo' | 'redo') => void
   onImport: (file: File) => void
   onExport: () => void
+  onExpertExport: (mask: File) => void
 }
 
 export function Toolbar({
@@ -23,6 +24,7 @@ export function Toolbar({
   onHistory,
   onImport,
   onExport,
+  onExpertExport,
 }: Props) {
   return (
     <div className="toolbar">
@@ -80,6 +82,18 @@ export function Toolbar({
       <button type="button" className="btn btn--primary" onClick={onExport}>
         Export PNG
       </button>
+      <label className="btn toolbar__file" title="Export with a second PNG cut out of it">
+        Expert Export PNG
+        <input
+          type="file"
+          accept="image/png"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) onExpertExport(file)
+            event.target.value = ''
+          }}
+        />
+      </label>
     </div>
   )
 }
