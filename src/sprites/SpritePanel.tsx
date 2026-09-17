@@ -24,6 +24,8 @@ type Props = {
   sprites: readonly Sprite[]
   activeId: string | null
   loading: boolean
+  processed: number
+  total: number
   skipped: number
   issues: readonly string[]
   onLoad: (files: SpriteFile[]) => void
@@ -113,7 +115,17 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
   )
 }
 
-export function SpritePanel({ sprites, activeId, loading, skipped, issues, onLoad, onPick }: Props) {
+export function SpritePanel({
+  sprites,
+  activeId,
+  loading,
+  processed,
+  total,
+  skipped,
+  issues,
+  onLoad,
+  onPick,
+}: Props) {
   const [query, setQuery] = useState('')
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
   const [folder, setFolder] = useState<FileSystemDirectoryHandle | null>(null)
@@ -208,7 +220,7 @@ export function SpritePanel({ sprites, activeId, loading, skipped, issues, onLoa
           disabled={busy}
           onClick={() => (supportsFolderPicker() ? void choose() : pickerRef.current?.click())}
         >
-          {busy ? 'Reading…' : 'Choose folder'}
+          {busy ? (loading ? `Loading ${processed}/${total}…` : 'Reading…') : 'Choose folder'}
         </button>
         {folder && sprites.length === 0 && !busy && (
           <button
@@ -234,6 +246,11 @@ export function SpritePanel({ sprites, activeId, loading, skipped, issues, onLoa
           />
         )}
       </div>
+      {loading && (
+        <p className="sprites__note" aria-live="polite">
+          {processed} / {total} sprites loaded · {sprites.length} available
+        </p>
+      )}
       {(sprites.length > 0 || skipped > 0) && (
         <p className="sprites__note">
           {sprites.length} sprites{skipped > 0 ? ` · ${skipped} file(s) skipped` : ''}

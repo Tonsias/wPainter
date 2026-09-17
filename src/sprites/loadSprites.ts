@@ -16,6 +16,13 @@ const MAX_REPORTED_ISSUES = 100
 
 type SpriteLoad = { sprites: Sprite[]; skipped: number; issues: string[] }
 
+export type SpriteLoadProgress = {
+  readonly processed: number
+  readonly total: number
+  readonly sprites: readonly Sprite[]
+  readonly skipped: number
+}
+
 // A file paired with where it sits inside the picked folder: a directory handle's files know
 // nothing of their own path, and `webkitRelativePath` is read-only, so the pair is what both
 // ways of choosing a folder can produce.
@@ -57,11 +64,15 @@ async function readSprite({ file, path }: SpriteFile): Promise<SpriteRead> {
   }
 }
 
-export async function loadSprites(files: readonly SpriteFile[]): Promise<SpriteLoad> {
+export async function loadSprites(
+  files: readonly SpriteFile[],
+  onProgress?: (progress: SpriteLoadProgress) => void,
+): Promise<SpriteLoad> {
   const images = files.filter(({ file }) => SPRITE_FILE.test(file.name))
   const sprites: Sprite[] = []
   const issues: string[] = []
   let pixels = 0
+  onProgress?.({ processed: 0, total: images.length, sprites: [], skipped: 0 })
   for (let start = 0; start < images.length; start += IN_FLIGHT) {
     const batch = await Promise.all(images.slice(start, start + IN_FLIGHT).map(readSprite))
     for (const result of batch) {
@@ -74,10 +85,22 @@ export async function loadSprites(files: readonly SpriteFile[]): Promise<SpriteL
         issues.push(
           `Das Pixel-Limit von ${MAX_PIXELS.toLocaleString('de-DE')} Pixeln wurde erreicht; weitere Bilder wurden übersprungen.`,
         )
+        onProgress?.({
+          processed: start + batch.length,
+          total: images.length,
+          sprites: [...sprites],
+          skipped: files.length - sprites.length,
+        })
         return { sprites, skipped: files.length - sprites.length, issues }
       }
       sprites.push(result.sprite)
     }
+    onProgress?.({
+      processed: start + batch.length,
+      total: images.length,
+      sprites: [...sprites],
+      skipped: files.length - sprites.length,
+    })
   }
   const unsupported = files.length - images.length
   if (unsupported > 0) {

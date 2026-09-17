@@ -54,7 +54,13 @@ export function App() {
   const [selection, setSelection] = useState<Rect | null>(null)
   const [sprites, setSprites] = useState<readonly Sprite[]>([])
   const [spriteId, setSpriteId] = useState<string | null>(null)
-  const [spriteLoad, setSpriteLoad] = useState({ loading: false, skipped: 0, issues: [] as string[] })
+  const [spriteLoad, setSpriteLoad] = useState({
+    loading: false,
+    processed: 0,
+    total: 0,
+    skipped: 0,
+    issues: [] as string[],
+  })
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
   const [error, setError] = useState<string | null>(null)
 
@@ -406,14 +412,33 @@ export function App() {
             sprites={sprites}
             activeId={spriteId}
             loading={spriteLoad.loading}
+            processed={spriteLoad.processed}
+            total={spriteLoad.total}
             skipped={spriteLoad.skipped}
             issues={spriteLoad.issues}
             onLoad={(files) => {
-              setSpriteLoad({ loading: true, skipped: 0, issues: [] })
-              void loadSprites(files).then((result) => {
+              setSprites([])
+              setSpriteId(null)
+              setSpriteLoad({ loading: true, processed: 0, total: 0, skipped: 0, issues: [] })
+              void loadSprites(files, (progress) => {
+                setSprites(progress.sprites)
+                setSpriteId((current) => current ?? progress.sprites[0]?.id ?? null)
+                setSpriteLoad((current) => ({
+                  ...current,
+                  loading: true,
+                  processed: progress.processed,
+                  total: progress.total,
+                  skipped: progress.skipped,
+                }))
+              }).then((result) => {
                 setSprites(result.sprites)
-                setSpriteId(result.sprites[0]?.id ?? null)
-                setSpriteLoad({ loading: false, skipped: result.skipped, issues: result.issues })
+                setSpriteId((current) => current ?? result.sprites[0]?.id ?? null)
+                setSpriteLoad((current) => ({
+                  ...current,
+                  loading: false,
+                  skipped: result.skipped,
+                  issues: result.issues,
+                }))
               })
             }}
             onPick={(picked) => {
