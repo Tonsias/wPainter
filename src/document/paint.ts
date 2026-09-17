@@ -6,6 +6,12 @@ export type PixelBuffer = {
   readonly height: number
 }
 
+let stampScale = 1
+
+export function setStampScale(scale: number) {
+  stampScale = Math.max(0.1, Math.min(8, scale))
+}
+
 export function scalePixelBuffer(source: PixelBuffer, factor: number): PixelBuffer {
   const scale = Math.max(0.1, Math.min(8, factor))
   const width = Math.max(1, Math.round(source.width * scale))
@@ -21,16 +27,7 @@ export function scalePixelBuffer(source: PixelBuffer, factor: number): PixelBuff
   return { pixels, width, height }
 }
 
-// A square nib, offset so odd sizes centre on the cursor and even sizes lean up-left — the
-// convention every pixel editor uses, and the only one that keeps size 1 exactly on the cursor.
-export function paintDot(
-  target: PixelBuffer,
-  x: number,
-  y: number,
-  size: number,
-  value: number,
-  protect?: number,
-) {
+export function paintDot(target: PixelBuffer, x: number, y: number, size: number, value: number, protect?: number) {
   const start = -Math.floor((size - 1) / 2)
   for (let dy = 0; dy < size; dy += 1) {
     const py = y + start + dy
@@ -39,19 +36,15 @@ export function paintDot(
       const px = x + start + dx
       if (px < 0 || px >= target.width) continue
       const index = py * target.width + px
-      if (target.pixels[index] === protect) continue
-      target.pixels[index] = value
+      if (target.pixels[index] !== protect) target.pixels[index] = value
     }
   }
 }
 
 function walkLine(fromX: number, fromY: number, toX: number, toY: number, visit: (x: number, y: number) => void) {
-  let x = fromX
-  let y = fromY
-  const stepX = fromX < toX ? 1 : -1
-  const stepY = fromY < toY ? 1 : -1
-  const deltaX = Math.abs(toX - fromX)
-  const deltaY = -Math.abs(toY - fromY)
+  let x = fromX; let y = fromY
+  const stepX = fromX < toX ? 1 : -1; const stepY = fromY < toY ? 1 : -1
+  const deltaX = Math.abs(toX - fromX); const deltaY = -Math.abs(toY - fromY)
   let error = deltaX + deltaY
   for (;;) {
     visit(x, y)
@@ -67,50 +60,40 @@ export function paintLine(target: PixelBuffer, fromX: number, fromY: number, toX
 }
 
 export function paintOutlineLine(target: PixelBuffer, fromX: number, fromY: number, toX: number, toY: number, size: number, fill: number, edge: number) {
-  walkLine(fromX, fromY, toX, toY, (x, y) => {
-    paintDot(target, x, y, size + 2, edge, fill)
-    paintDot(target, x, y, size, fill)
-  })
+  walkLine(fromX, fromY, toX, toY, (x, y) => { paintDot(target, x, y, size + 2, edge, fill); paintDot(target, x, y, size, fill) })
 }
 
 export function floodFill(target: PixelBuffer, x: number, y: number, value: number) {
-  const { pixels, width, height } = target
-  const start = pixels[y * width + x]
+  const { pixels, width, height } = target; const start = pixels[y * width + x]
   if (start === value) return
   const stack = [x, y]
   while (stack.length > 0) {
-    const seedY = stack.pop() as number
-    let left = stack.pop() as number
+    const seedY = stack.pop() as number; let left = stack.pop() as number
     while (left > 0 && pixels[seedY * width + left - 1] === start) left -= 1
-    let right = left
-    let spanAbove = false
-    let spanBelow = false
+    let right = left; let spanAbove = false; let spanBelow = false
     while (right < width && pixels[seedY * width + right] === start) {
       pixels[seedY * width + right] = value
       const above = seedY > 0 && pixels[(seedY - 1) * width + right] === start
-      if (above && !spanAbove) stack.push(right, seedY - 1)
-      spanAbove = above
+      if (above && !spanAbove) stack.push(right, seedY - 1); spanAbove = above
       const below = seedY < height - 1 && pixels[(seedY + 1) * width + right] === start
-      if (below && !spanBelow) stack.push(right, seedY + 1)
-      spanBelow = below
+      if (below && !spanBelow) stack.push(right, seedY + 1); spanBelow = below
       right += 1
     }
   }
 }
 
 export function stamp(target: PixelBuffer, source: PixelBuffer, atX: number, atY: number) {
-  for (let y = 0; y < source.height; y += 1) {
+  const scaled = stampScale === 1 ? source : scalePixelBuffer(source, stampScale)
+  for (let y = 0; y < scaled.height; y += 1) {
     const py = atY + y
     if (py < 0 || py >= target.height) continue
-    for (let x = 0; x < source.width; x += 1) {
+    for (let x = 0; x < scaled.width; x += 1) {
       const px = atX + x
       if (px < 0 || px >= target.width) continue
-      const value = source.pixels[y * source.width + x]
+      const value = scaled.pixels[y * scaled.width + x]
       if (value !== EMPTY_PIXEL) target.pixels[py * target.width + px] = value
     }
   }
 }
 
-export function stampOrigin(cursor: number, extent: number): number {
-  return cursor - Math.floor(extent / 2)
-}
+export function stampOrigin(cursor: number, extent: number): number { return cursor - Math.floor(extent / 2) }
