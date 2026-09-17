@@ -6,7 +6,7 @@ import { SPRITE_FILE, splitSpritePath, type Sprite } from './library.ts'
 // Every sprite is held as one byte per pixel, so what a library really costs is its pixel count,
 // not its file count: 3000 tile sprites are a few megabytes, 300 photographs are hundreds. The
 // budget is a guard against picking a photo archive by accident, not a design limit.
-const MAX_PIXELS = 96_000_000
+const MAX_PIXELS = 960_000_000
 
 // Decoding is asynchronous and mostly waiting, so a folder of thousands of small files is far
 // faster in flights than one at a time — but an unbounded Promise.all over all of them opens
