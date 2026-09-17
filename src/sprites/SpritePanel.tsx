@@ -25,6 +25,7 @@ type Props = {
   activeId: string | null
   loading: boolean
   skipped: number
+  issues: readonly string[]
   onLoad: (files: SpriteFile[]) => void
   onPick: (sprite: Sprite) => void
 }
@@ -112,7 +113,7 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
   )
 }
 
-export function SpritePanel({ sprites, activeId, loading, skipped, onLoad, onPick }: Props) {
+export function SpritePanel({ sprites, activeId, loading, skipped, issues, onLoad, onPick }: Props) {
   const [query, setQuery] = useState('')
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
   const [folder, setFolder] = useState<FileSystemDirectoryHandle | null>(null)
@@ -233,12 +234,22 @@ export function SpritePanel({ sprites, activeId, loading, skipped, onLoad, onPic
           />
         )}
       </div>
-      {sprites.length > 0 && (
+      {(sprites.length > 0 || skipped > 0) && (
         <p className="sprites__note">
           {sprites.length} sprites{skipped > 0 ? ` · ${skipped} file(s) skipped` : ''}
         </p>
       )}
-      {sprites.length === 0 && !busy && (
+      {issues.length > 0 && (
+        <details className="sprites__issues">
+          <summary>Warum Dateien übersprungen wurden ({issues.length})</summary>
+          <ul>
+            {issues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {sprites.length === 0 && !busy && issues.length === 0 && (
         <p className="sprites__note">
           Pick a folder of .png sprites. Its sub-folders become the tree below.
         </p>

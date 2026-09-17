@@ -54,7 +54,7 @@ export function App() {
   const [selection, setSelection] = useState<Rect | null>(null)
   const [sprites, setSprites] = useState<readonly Sprite[]>([])
   const [spriteId, setSpriteId] = useState<string | null>(null)
-  const [spriteLoad, setSpriteLoad] = useState({ loading: false, skipped: 0 })
+  const [spriteLoad, setSpriteLoad] = useState({ loading: false, skipped: 0, issues: [] as string[] })
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
   const [error, setError] = useState<string | null>(null)
 
@@ -123,9 +123,7 @@ export function App() {
       const from = startRef.current ?? point
       const dragged = from.x !== point.x || from.y !== point.y
       setSelection(
-        dragged
-          ? clampRect(rectBetween(from.x, from.y, point.x, point.y), doc.width, doc.height)
-          : null,
+        dragged ? clampRect(rectBetween(from.x, from.y, point.x, point.y), doc.width, doc.height) : null,
       )
       return
     }
@@ -199,9 +197,7 @@ export function App() {
   const endStroke = () => {
     const drag = moveRef.current
     if (drag?.region) {
-      setSelection(
-        clampRect(shiftRect(drag.region, drag.delta.x, drag.delta.y), doc.width, doc.height),
-      )
+      setSelection(clampRect(shiftRect(drag.region, drag.delta.x, drag.delta.y), doc.width, doc.height))
     }
     moveRef.current = null
     strokeRef.current = false
@@ -411,12 +407,13 @@ export function App() {
             activeId={spriteId}
             loading={spriteLoad.loading}
             skipped={spriteLoad.skipped}
+            issues={spriteLoad.issues}
             onLoad={(files) => {
-              setSpriteLoad({ loading: true, skipped: 0 })
+              setSpriteLoad({ loading: true, skipped: 0, issues: [] })
               void loadSprites(files).then((result) => {
                 setSprites(result.sprites)
                 setSpriteId(result.sprites[0]?.id ?? null)
-                setSpriteLoad({ loading: false, skipped: result.skipped })
+                setSpriteLoad({ loading: false, skipped: result.skipped, issues: result.issues })
               })
             }}
             onPick={(picked) => {
