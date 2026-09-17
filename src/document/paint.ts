@@ -6,10 +6,23 @@ export type PixelBuffer = {
   readonly height: number
 }
 
+export function scalePixelBuffer(source: PixelBuffer, factor: number): PixelBuffer {
+  const scale = Math.max(0.1, Math.min(8, factor))
+  const width = Math.max(1, Math.round(source.width * scale))
+  const height = Math.max(1, Math.round(source.height * scale))
+  const pixels = new Uint8Array(width * height)
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = Math.min(source.height - 1, Math.floor((y / height) * source.height))
+    for (let x = 0; x < width; x += 1) {
+      const sourceX = Math.min(source.width - 1, Math.floor((x / width) * source.width))
+      pixels[y * width + x] = source.pixels[sourceY * source.width + sourceX]
+    }
+  }
+  return { pixels, width, height }
+}
+
 // A square nib, offset so odd sizes centre on the cursor and even sizes lean up-left — the
 // convention every pixel editor uses, and the only one that keeps size 1 exactly on the cursor.
-// `protect` is a colour the nib refuses to paint over, which is what lets an outline pass run
-// after the colour it surrounds without eating into it.
 export function paintDot(
   target: PixelBuffer,
   x: number,
@@ -32,14 +45,7 @@ export function paintDot(
   }
 }
 
-// Bresenham, so a fast drag paints a connected line instead of a dotted trail of pointer events.
-function walkLine(
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  visit: (x: number, y: number) => void,
-) {
+function walkLine(fromX: number, fromY: number, toX: number, toY: number, visit: (x: number, y: number) => void) {
   let x = fromX
   let y = fromY
   const stepX = fromX < toX ? 1 : -1
@@ -51,50 +57,22 @@ function walkLine(
     visit(x, y)
     if (x === toX && y === toY) return
     const doubled = 2 * error
-    if (doubled >= deltaY) {
-      error += deltaY
-      x += stepX
-    }
-    if (doubled <= deltaX) {
-      error += deltaX
-      y += stepY
-    }
+    if (doubled >= deltaY) { error += deltaY; x += stepX }
+    if (doubled <= deltaX) { error += deltaX; y += stepY }
   }
 }
 
-export function paintLine(
-  target: PixelBuffer,
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  size: number,
-  value: number,
-) {
+export function paintLine(target: PixelBuffer, fromX: number, fromY: number, toX: number, toY: number, size: number, value: number) {
   walkLine(fromX, fromY, toX, toY, (x, y) => paintDot(target, x, y, size, value))
 }
 
-// A nib that carries its own one-pixel border: the edge goes down first and never touches a
-// pixel already holding the fill, so the border of one step cannot eat the core of the last —
-// which is the whole reason a dragged stroke stays a clean line inside an unbroken outline.
-export function paintOutlineLine(
-  target: PixelBuffer,
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  size: number,
-  fill: number,
-  edge: number,
-) {
+export function paintOutlineLine(target: PixelBuffer, fromX: number, fromY: number, toX: number, toY: number, size: number, fill: number, edge: number) {
   walkLine(fromX, fromY, toX, toY, (x, y) => {
     paintDot(target, x, y, size + 2, edge, fill)
     paintDot(target, x, y, size, fill)
   })
 }
 
-// Scanline flood fill: an explicit stack rather than recursion, which blows the call stack on a
-// large uniform region.
 export function floodFill(target: PixelBuffer, x: number, y: number, value: number) {
   const { pixels, width, height } = target
   const start = pixels[y * width + x]
@@ -120,7 +98,6 @@ export function floodFill(target: PixelBuffer, x: number, y: number, value: numb
   }
 }
 
-// Holes in the sprite stay holes in the target: a stamp composites, it does not blit a rectangle.
 export function stamp(target: PixelBuffer, source: PixelBuffer, atX: number, atY: number) {
   for (let y = 0; y < source.height; y += 1) {
     const py = atY + y
@@ -134,7 +111,6 @@ export function stamp(target: PixelBuffer, source: PixelBuffer, atX: number, atY
   }
 }
 
-// Top-left of a stamp centred on the cursor.
 export function stampOrigin(cursor: number, extent: number): number {
   return cursor - Math.floor(extent / 2)
 }
