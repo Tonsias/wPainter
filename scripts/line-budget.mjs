@@ -32,8 +32,9 @@ const CEILINGS = new Map([
 const DEFAULT_CEILING = 1200;
 
 // Checked separately from the per-directory ceilings so a reader sees the whole promise, not
-// only the parts: src/ as a whole stays small enough to read in one context window.
-const TOTAL_CEILING = 3680;
+// only the parts: src/ as a whole stays small enough to read in one context window. Raised for
+// the stamp's eight orientations, whose exhaustive tests are most of what it bought.
+const TOTAL_CEILING = 3900;
 
 function listSourceFiles(dir) {
   const out = [];

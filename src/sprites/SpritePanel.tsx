@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './SpritePanel.css'
 import { writePixels } from '../document/composite.ts'
 import {
+  UNTURNED,
+  flipOrientation,
+  rotateOrientation,
+  type Orientation,
+} from '../document/paint.ts'
+import {
   SPRITE_SCALES,
   buildSpriteTree,
   countSprites,
@@ -28,10 +34,26 @@ type Props = {
   activeId: string | null
   skipped: number
   scale: SpriteScale
+  orientation: Orientation
   onLoad: (files: SpriteFile[]) => void
   onPick: (sprite: Sprite) => void
   onScale: (scale: SpriteScale) => void
+  onOrient: (orientation: Orientation) => void
 }
+
+const TURNS = [
+  {
+    glyph: '↔',
+    title: 'Flip the stamp horizontally',
+    apply: (current: Orientation) => flipOrientation(current, 'horizontal'),
+  },
+  {
+    glyph: '↕',
+    title: 'Flip the stamp vertically',
+    apply: (current: Orientation) => flipOrientation(current, 'vertical'),
+  },
+  { glyph: '⟳', title: 'Turn the stamp a quarter clockwise', apply: rotateOrientation },
+] as const
 
 type BranchProps = {
   node: SpriteNode
@@ -129,7 +151,17 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
   )
 }
 
-export function SpritePanel({ sprites, activeId, skipped, scale, onLoad, onPick, onScale }: Props) {
+export function SpritePanel({
+  sprites,
+  activeId,
+  skipped,
+  scale,
+  orientation,
+  onLoad,
+  onPick,
+  onScale,
+  onOrient,
+}: Props) {
   const [query, setQuery] = useState('')
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
   const [folder, setFolder] = useState<FileSystemDirectoryHandle | null>(null)
@@ -270,6 +302,33 @@ export function SpritePanel({ sprites, activeId, skipped, scale, onLoad, onPick,
             {spriteScaleLabel(option)}
           </button>
         ))}
+      </div>
+      {/* Actions rather than modes: each press turns or mirrors what the stamp already shows, so
+          the three compose and a fourth turn is the way back. The reset only appears once there
+          is something to reset, which is also the only sign the panel gives that a stamp is
+          turned — the ghost under the cursor is the other one. */}
+      <div className="sprites__orient">
+        {TURNS.map(({ glyph, title, apply }) => (
+          <button
+            key={glyph}
+            type="button"
+            className="btn sprites__turn"
+            title={title}
+            onClick={() => onOrient(apply(orientation))}
+          >
+            {glyph}
+          </button>
+        ))}
+        {(orientation.turns !== 0 || orientation.mirrored) && (
+          <button
+            type="button"
+            className="btn sprites__turn sprites__turn--reset"
+            title="Stamp the sprite the way it is on disk"
+            onClick={() => onOrient(UNTURNED)}
+          >
+            Reset
+          </button>
+        )}
       </div>
       {note && <p className="sprites__note">{note}</p>}
       <div className="sprites__tree">

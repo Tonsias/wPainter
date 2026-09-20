@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  UNTURNED,
+  flipOrientation,
   floodFill,
   paintDot,
   paintLine,
   paintOutlineLine,
+  orientPixelBuffer,
+  rotateOrientation,
   scalePixelBuffer,
   stamp,
   stampOrigin,
@@ -135,5 +139,72 @@ describe('scalePixelBuffer', () => {
   it('never scales a buffer away to nothing', () => {
     const scaled = scalePixelBuffer({ pixels: new Uint8Array(1), width: 1, height: 1 }, 0.25)
     expect([scaled.width, scaled.height]).toEqual([1, 1])
+  })
+})
+
+describe('orientPixelBuffer', () => {
+  // Wider than it is tall and asymmetric in both axes, so a turn that went the wrong way or an
+  // axis that was mirrored instead of the other one cannot pass.
+  const source: PixelBuffer = { pixels: new Uint8Array([1, 2, 3, 4, 5, 6]), width: 3, height: 2 }
+
+  it('hands back the source itself when nothing is turned or mirrored', () => {
+    expect(orientPixelBuffer(source, UNTURNED)).toBe(source)
+  })
+
+  it('turns a quarter clockwise and swaps the side lengths', () => {
+    const turned = orientPixelBuffer(source, { turns: 1, mirrored: false })
+    expect([turned.width, turned.height]).toEqual([2, 3])
+    expect([...turned.pixels]).toEqual([4, 1, 5, 2, 6, 3])
+  })
+
+  it('mirrors horizontally before it turns', () => {
+    const flipped = orientPixelBuffer(source, { turns: 0, mirrored: true })
+    expect([...flipped.pixels]).toEqual([3, 2, 1, 6, 5, 4])
+  })
+
+  it('reaches a vertical flip as the mirror plus a half turn', () => {
+    const flipped = orientPixelBuffer(source, flipOrientation(UNTURNED, 'vertical'))
+    expect([...flipped.pixels]).toEqual([4, 5, 6, 1, 2, 3])
+  })
+})
+
+describe('rotateOrientation and flipOrientation', () => {
+  it('comes back to where it started after four turns', () => {
+    const turns = [1, 2, 3, 4].reduce(rotateOrientation, UNTURNED)
+    expect(turns).toEqual(UNTURNED)
+  })
+
+  it('undoes a flip with the same flip, whatever the sprite is turned to', () => {
+    for (const axis of ['horizontal', 'vertical'] as const) {
+      for (const turns of [0, 1, 2, 3] as const) {
+        const start = { turns, mirrored: true }
+        expect(flipOrientation(flipOrientation(start, axis), axis)).toEqual(start)
+      }
+    }
+  })
+
+  // The only claim the two-field model makes that a reader could break: the buttons are allowed
+  // to disagree about the spelling of an orientation, never about the pixels it produces.
+  it('flips what is on screen rather than what the source looked like', () => {
+    const source: PixelBuffer = { pixels: new Uint8Array([1, 2, 3, 4, 5, 6]), width: 3, height: 2 }
+    for (const axis of ['horizontal', 'vertical'] as const) {
+      for (const turns of [0, 1, 2, 3] as const) {
+        for (const mirrored of [false, true]) {
+          const shown = orientPixelBuffer(source, { turns, mirrored })
+          const flipped = orientPixelBuffer(source, flipOrientation({ turns, mirrored }, axis))
+          const expected = new Uint8Array(shown.pixels.length)
+          for (let y = 0; y < shown.height; y += 1) {
+            for (let x = 0; x < shown.width; x += 1) {
+              const from =
+                axis === 'horizontal'
+                  ? y * shown.width + (shown.width - 1 - x)
+                  : (shown.height - 1 - y) * shown.width + x
+              expected[y * shown.width + x] = shown.pixels[from]
+            }
+          }
+          expect([...flipped.pixels]).toEqual([...expected])
+        }
+      }
+    }
   })
 })

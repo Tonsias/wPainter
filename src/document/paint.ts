@@ -24,6 +24,60 @@ export function scalePixelBuffer(source: PixelBuffer, scale: number): PixelBuffe
   return { pixels, width, height }
 }
 
+// The eight ways a sprite can be laid down, spelled as the two operations that generate them: a
+// count of clockwise quarter turns and one horizontal mirror applied before them. A vertical flip
+// is that mirror plus a half turn, so a second axis flag would give some orientations two
+// spellings and let the buttons disagree about which one they are on.
+export type Orientation = {
+  readonly turns: 0 | 1 | 2 | 3
+  readonly mirrored: boolean
+}
+
+export const UNTURNED: Orientation = { turns: 0, mirrored: false }
+
+// Each of these composes a new operation *onto the result the user is looking at*, which is why
+// a mirror reverses the turn count: mirroring after a rotation is the same as rotating the other
+// way after a mirror, and only the latter is a state this type can hold.
+export const rotateOrientation = ({ turns, mirrored }: Orientation): Orientation => ({
+  turns: (((turns + 1) % 4) as Orientation['turns']),
+  mirrored,
+})
+
+export const flipOrientation = (
+  { turns, mirrored }: Orientation,
+  axis: 'horizontal' | 'vertical',
+): Orientation => ({
+  turns: (((axis === 'horizontal' ? 4 - turns : 6 - turns) % 4) as Orientation['turns']),
+  mirrored: !mirrored,
+})
+
+// Forward mapping, source pixel to destination pixel: a quarter turn is exact on a grid, so
+// unlike the scale above nothing is sampled and no pixel is lost or repeated.
+export function orientPixelBuffer(source: PixelBuffer, orientation: Orientation): PixelBuffer {
+  const { turns, mirrored } = orientation
+  if (turns === 0 && !mirrored) return source
+  const turned = turns % 2 === 1
+  const width = turned ? source.height : source.width
+  const height = turned ? source.width : source.height
+  const pixels = new Uint8Array(width * height)
+  for (let sourceY = 0; sourceY < source.height; sourceY += 1) {
+    for (let sourceX = 0; sourceX < source.width; sourceX += 1) {
+      const x = mirrored ? source.width - 1 - sourceX : sourceX
+      const y = sourceY
+      const target =
+        turns === 0
+          ? y * width + x
+          : turns === 1
+            ? x * width + (source.height - 1 - y)
+            : turns === 2
+              ? (source.height - 1 - y) * width + (source.width - 1 - x)
+              : (source.width - 1 - x) * width + y
+      pixels[target] = source.pixels[sourceY * source.width + sourceX]
+    }
+  }
+  return { pixels, width, height }
+}
+
 export function paintDot(
   target: PixelBuffer,
   x: number,

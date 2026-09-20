@@ -14,12 +14,15 @@ import {
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
 import {
+  UNTURNED,
   floodFill,
+  orientPixelBuffer,
   paintLine,
   paintOutlineLine,
   scalePixelBuffer,
   stamp,
   stampOrigin,
+  type Orientation,
   type PixelBuffer,
 } from '../document/paint.ts'
 import { clampRect, movePixels, rectBetween, shiftRect, type Rect } from '../document/selection.ts'
@@ -87,6 +90,7 @@ export function App() {
   const [spriteId, setSpriteId] = useState<string | null>(null)
   const [spriteImage, setSpriteImage] = useState<PixelBuffer | null>(null)
   const [spriteScale, setSpriteScale] = useState<SpriteScale>(1)
+  const [spriteOrientation, setSpriteOrientation] = useState<Orientation>(UNTURNED)
   const [spritesSkipped, setSpritesSkipped] = useState(0)
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
@@ -142,10 +146,13 @@ export function App() {
     () =>
       spriteImage &&
       scalePixelBuffer(
-        { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
+        orientPixelBuffer(
+          { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
+          spriteOrientation,
+        ),
         spriteScale,
       ),
-    [spriteImage, remap, spriteScale],
+    [spriteImage, remap, spriteOrientation, spriteScale],
   )
 
   // The clone has to happen here and now: a stroke mutates the layer buffer in place, so a clone
@@ -521,6 +528,7 @@ export function App() {
               activeId={spriteId}
               skipped={spritesSkipped}
               scale={spriteScale}
+              orientation={spriteOrientation}
               onLoad={(files) => {
                 const indexed = indexSprites(files)
                 setSprites(indexed)
@@ -532,6 +540,7 @@ export function App() {
                 pickTool('stamp')
               }}
               onScale={setSpriteScale}
+              onOrient={setSpriteOrientation}
             />
           </section>
         </aside>
