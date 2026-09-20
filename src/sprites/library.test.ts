@@ -71,6 +71,8 @@ describe('matchesQuery', () => {
 describe('spriteScaleLabel', () => {
   it('names every step without letting a repeating fraction leak into the label', () => {
     expect(SPRITE_SCALES.map(spriteScaleLabel)).toEqual([
+      '1/6',
+      '1/5',
       '1/4',
       '1/3',
       '1/2',

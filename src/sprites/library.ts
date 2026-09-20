@@ -8,9 +8,12 @@ export type Sprite = {
 }
 
 // Nearest-neighbour factors, so an up-scale stays on whole source pixels; the ones below 1 are
-// there for a sprite that arrives larger than the template it has to fit into. A third is spelled
-// out rather than written `1 / 3`, because `as const` keeps a literal literal but not an expression.
-export const SPRITE_SCALES = [0.25, 0.3333333333333333, 0.5, 1, 2, 3, 4, 6, 8] as const
+// there for a sprite that arrives larger than the template it has to fit into. A sixth and a third
+// are spelled out rather than written `1 / 6`, because `as const` keeps a literal literal but not
+// an expression.
+export const SPRITE_SCALES = [
+  0.16666666666666666, 0.2, 0.25, 0.3333333333333333, 0.5, 1, 2, 3, 4, 6, 8,
+] as const
 export type SpriteScale = (typeof SPRITE_SCALES)[number]
 
 export const spriteScaleLabel = (scale: SpriteScale): string =>
