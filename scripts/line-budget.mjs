@@ -19,7 +19,12 @@ const CEILINGS = new Map([
   // land, and the toolbar grows a control per tool; 1200 left no room for the next one. The
   // draggable panel then added a separator the shell has to carry: its own track in the grid,
   // pointer and keyboard handling, and a re-clamp when the window changes size.
-  ['ui', { ceiling: 1550, reason: 'canvas host, a toolbar per tool, and a resizable panel' }],
+  // The side panel then grew sections that fold, so the sprite tree can own the panel's height
+  // and be the only thing in it that scrolls.
+  [
+    'ui',
+    { ceiling: 1620, reason: 'canvas host, a toolbar per tool, a resizable panel, folding sections' },
+  ],
 ]);
 
 // Applies to every top-level directory under src/ without its own entry above, and to `(root)`
@@ -28,7 +33,7 @@ const DEFAULT_CEILING = 1200;
 
 // Checked separately from the per-directory ceilings so a reader sees the whole promise, not
 // only the parts: src/ as a whole stays small enough to read in one context window.
-const TOTAL_CEILING = 3600;
+const TOTAL_CEILING = 3680;
 
 function listSourceFiles(dir) {
   const out = [];

@@ -1,11 +1,23 @@
  .sprites {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-2);
   width: 100%;
+  min-height: 0;
   /* The panel is dragged to any width, so the tree lays itself out against the room it was given
-     rather than against the window — a media query would know nothing about where the drag ended. */
+     rather than against the window — a media query would know nothing about where the drag ended.
+     `size` is wrong here: the tree's own height is what the scroller resolves. */
   container-type: inline-size;
+}
+
+/* The panel's only scroller. Everything above it — the folder button, the filter and the scale —
+   stays put, so the tree never carries a control out of sight with it. */
+.sprites__tree {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sprites__picker { display: none; }

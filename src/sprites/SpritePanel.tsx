@@ -194,6 +194,13 @@ export function SpritePanel({ sprites, activeId, skipped, scale, onLoad, onPick,
       return next
     })
 
+  const note =
+    sprites.length > 0
+      ? `${sprites.length} sprites${skipped > 0 ? ` · ${skipped} non-image file(s) skipped` : ''}`
+      : reading
+        ? ''
+        : 'Pick a folder of .png sprites. Its sub-folders become the tree below.'
+
   return (
     <div className="sprites">
       <input
@@ -249,34 +256,27 @@ export function SpritePanel({ sprites, activeId, skipped, scale, onLoad, onPick,
           />
         )}
       </div>
-      {sprites.length > 0 && (
-        <>
-          <p className="sprites__note">
-            {sprites.length} sprites{skipped > 0 ? ` · ${skipped} non-image file(s) skipped` : ''}
-          </p>
-          <div className="segment sprites__scale">
-            {SPRITE_SCALES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                title={`Stamp at ${Math.round(option * 100)}%`}
-                className={`segment__option${option === scale ? ' segment__option--active' : ''}`}
-                onClick={() => onScale(option)}
-              >
-                {spriteScaleLabel(option)}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-      {sprites.length === 0 && !reading && (
-        <p className="sprites__note">
-          Pick a folder of .png sprites. Its sub-folders become the tree below.
-        </p>
-      )}
-      {sprites.length > 0 && (
-        <Branch node={tree} activeId={activeId} isOpen={isOpen} onToggle={toggle} onPick={onPick} />
-      )}
+      {/* Outside the scroller on purpose: the scale a stamp is laid down at has to stay readable
+          and reachable however far into the tree the list has been scrolled. */}
+      <div className="segment sprites__scale">
+        {SPRITE_SCALES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            title={`Stamp at ${Math.round(option * 100)}%`}
+            className={`segment__option${option === scale ? ' segment__option--active' : ''}`}
+            onClick={() => onScale(option)}
+          >
+            {spriteScaleLabel(option)}
+          </button>
+        ))}
+      </div>
+      {note && <p className="sprites__note">{note}</p>}
+      <div className="sprites__tree">
+        {sprites.length > 0 && (
+          <Branch node={tree} activeId={activeId} isOpen={isOpen} onToggle={toggle} onPick={onPick} />
+        )}
+      </div>
     </div>
   )
 }

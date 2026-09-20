@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import './App.css'
 import { LayerPanel } from '../document/LayerPanel.tsx'
 import { decodeImageFile, exportPng } from '../document/composite.ts'
@@ -53,6 +54,20 @@ function panelRoom(main: HTMLElement): number {
 // The frame padding the fit calculation has to leave for, so a freshly imported template is not
 // zoomed to exactly the point where the host starts scrolling.
 const FRAME_INSET = 40
+
+// The three settings sections fold away so the sprite tree — the one part that scrolls — can
+// have the panel's height. `details` keeps the open state, the caret and the keyboard for free.
+function PanelSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className="app__section" open>
+      <summary className="app__panel-title">
+        <span className="app__caret" aria-hidden="true">&#9656;</span>
+        {title}
+      </summary>
+      <div className="app__section-body">{children}</div>
+    </details>
+  )
+}
 
 export function App() {
   const [doc, setDoc] = useState<PaintDocument>(() => createDocument(DEFAULT_SIZE, DEFAULT_SIZE))
@@ -440,80 +455,85 @@ export function App() {
         />
 
         <aside className="app__panel">
-          <h2 className="app__panel-title">Canvas</h2>
-          <div className="app__size">
-            <input
-              type="number"
-              aria-label="Canvas width"
-              min={1}
-              max={MAX_CANVAS_SIDE}
-              value={size.width}
-              onChange={(event) =>
-                setSize((current) => ({ ...current, width: Number(event.target.value) }))
-              }
-            />
-            <span>×</span>
-            <input
-              type="number"
-              aria-label="Canvas height"
-              min={1}
-              max={MAX_CANVAS_SIDE}
-              value={size.height}
-              onChange={(event) =>
-                setSize((current) => ({ ...current, height: Number(event.target.value) }))
-              }
-            />
-            <button
-              type="button"
-              className="btn"
-              onClick={() =>
-                structural(resizeDocument(doc, clampSide(size.width), clampSide(size.height)))
-              }
-            >
-              Resize
-            </button>
-          </div>
-          {error && <p className="app__error">{error}</p>}
-          <label className="app__check">
-            <input
-              type="checkbox"
-              checked={freeOnly}
-              onChange={(event) => setFreeOnly(event.target.checked)}
-            />
-            Free colours only
-          </label>
+          <PanelSection title="Canvas">
+            <div className="app__size">
+              <input
+                type="number"
+                aria-label="Canvas width"
+                min={1}
+                max={MAX_CANVAS_SIDE}
+                value={size.width}
+                onChange={(event) =>
+                  setSize((current) => ({ ...current, width: Number(event.target.value) }))
+                }
+              />
+              <span>×</span>
+              <input
+                type="number"
+                aria-label="Canvas height"
+                min={1}
+                max={MAX_CANVAS_SIDE}
+                value={size.height}
+                onChange={(event) =>
+                  setSize((current) => ({ ...current, height: Number(event.target.value) }))
+                }
+              />
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  structural(resizeDocument(doc, clampSide(size.width), clampSide(size.height)))
+                }
+              >
+                Resize
+              </button>
+            </div>
+            {error && <p className="app__error">{error}</p>}
+            <label className="app__check">
+              <input
+                type="checkbox"
+                checked={freeOnly}
+                onChange={(event) => setFreeOnly(event.target.checked)}
+              />
+              Free colours only
+            </label>
+          </PanelSection>
 
-          <h2 className="app__panel-title">Palette</h2>
-          <PalettePanel
-            main={colorPixel}
-            edge={tool === 'outline' ? edgePixel : null}
-            slot={slot}
-            colorCount={colorCount}
-            onSlot={setSlot}
-            onChange={setSlotColor}
-          />
+          <PanelSection title="Palette">
+            <PalettePanel
+              main={colorPixel}
+              edge={tool === 'outline' ? edgePixel : null}
+              slot={slot}
+              colorCount={colorCount}
+              onSlot={setSlot}
+              onChange={setSlotColor}
+            />
+          </PanelSection>
 
-          <h2 className="app__panel-title">Layers</h2>
-          <LayerPanel doc={doc} onChange={structural} />
+          <PanelSection title="Layers">
+            <LayerPanel doc={doc} onChange={structural} />
+          </PanelSection>
 
-          <h2 className="app__panel-title">Sprites</h2>
-          <SpritePanel
-            sprites={sprites}
-            activeId={spriteId}
-            skipped={spritesSkipped}
-            scale={spriteScale}
-            onLoad={(files) => {
-              const indexed = indexSprites(files)
-              setSprites(indexed)
-              setSpriteId(indexed[0]?.id ?? null)
-              setSpritesSkipped(files.length - indexed.length)
-            }}
-            onPick={(picked) => {
-              setSpriteId(picked.id)
-              pickTool('stamp')
-            }}
-            onScale={setSpriteScale}
-          />
+          <section className="app__section app__section--sprites">
+            <h2 className="app__panel-title">Sprites</h2>
+            <SpritePanel
+              sprites={sprites}
+              activeId={spriteId}
+              skipped={spritesSkipped}
+              scale={spriteScale}
+              onLoad={(files) => {
+                const indexed = indexSprites(files)
+                setSprites(indexed)
+                setSpriteId(indexed[0]?.id ?? null)
+                setSpritesSkipped(files.length - indexed.length)
+              }}
+              onPick={(picked) => {
+                setSpriteId(picked.id)
+                pickTool('stamp')
+              }}
+              onScale={setSpriteScale}
+            />
+          </section>
         </aside>
       </main>
     </div>
