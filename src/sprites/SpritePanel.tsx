@@ -88,7 +88,7 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
       {node.folders.map((folder) => {
         const open = isOpen(folder.path)
         return (
-          <li key={folder.path}>
+          <li key={folder.path} className="sprites__row">
             <button
               type="button"
               className="sprites__folder"
@@ -114,7 +114,7 @@ function Branch({ node, activeId, isOpen, onToggle, onPick }: BranchProps) {
         )
       })}
       {node.sprites.map((sprite) => (
-        <li key={sprite.id}>
+        <li key={sprite.id} className="sprites__tile">
           <button
             type="button"
             title={sprite.name}

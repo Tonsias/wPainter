@@ -115,10 +115,42 @@ button:disabled {
 .app__main {
   display: grid;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: var(--space-4);
+  /* The panel's width is dragged, so it arrives as an inline custom property; the middle track is
+     the separator, which is why the gap is halved and paid on both sides of it instead. */
+  grid-template-columns: minmax(0, 1fr) var(--app-resizer-width, 14px) var(--app-panel-width, 340px);
+  gap: var(--space-2);
   min-height: 0;
+  /* A flex item refuses by default to shrink under the width of its own content, and a grid whose
+     panel track was dragged wide has plenty: without this, narrowing the window pushes the shell
+     out past its own edge instead of the panel giving the width back. */
+  min-width: 0;
   padding: var(--space-3) var(--space-4);
+}
+
+/* Wide enough to grab, narrow enough to look like a seam: the track is a comfortable hit area and
+   the visible pill is drawn inside it, rather than the hairline itself having to be hit. */
+.app__resizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Without this the browser claims the drag as a scroll gesture and the pointer events stop, and
+     a drag that leaves the grip selects its way across the panel's text. */
+  touch-action: none;
+  user-select: none;
+  cursor: col-resize;
+}
+
+.app__resizer::after {
+  content: '';
+  width: 6px;
+  height: 84px;
+  background: var(--color-neutral-300);
+  border-radius: 999px;
+}
+
+.app__resizer:hover::after,
+.app__resizer:focus-visible::after {
+  background: var(--color-accent-400);
 }
 
 .app__stage {
@@ -183,6 +215,11 @@ button:disabled {
   .app__main {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  /* Stacked, the panel has the full width and there is no horizontal room left to trade. */
+  .app__resizer {
+    display: none;
   }
 }
 

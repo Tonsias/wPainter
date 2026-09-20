@@ -3,6 +3,9 @@
   flex-direction: column;
   gap: var(--space-2);
   width: 100%;
+  /* The panel is dragged to any width, so the tree lays itself out against the room it was given
+     rather than against the window — a media query would know nothing about where the drag ended. */
+  container-type: inline-size;
 }
 
 .sprites__picker { display: none; }
@@ -66,6 +69,58 @@
 .sprites__branch > li {
   content-visibility: auto;
   contain-intrinsic-size: auto 28px;
+}
+
+/* Wide enough for a second column of thumbnails, the leaves stop being rows and become tiles that
+   share the width out between them: more columns as the panel grows, and the last of the room
+   spent making each tile bigger rather than left as a margin. */
+@container (min-width: 340px) {
+  .sprites__branch {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: var(--space-2);
+  }
+
+  /* A folder heading still owns its whole row; only the sprites under it tile. */
+  .sprites__row {
+    grid-column: 1 / -1;
+  }
+
+  .sprites__tile {
+    contain-intrinsic-size: auto 132px;
+  }
+
+  .sprites__tile .sprites__leaf {
+    flex-direction: column;
+    gap: 4px;
+    height: 100%;
+    text-align: center;
+  }
+
+  .sprites__tile .sprites__thumb {
+    /* Square whatever the sprite is, and sized by the column rather than by a px constant, which
+       is what makes a wider panel show bigger art instead of the same art further apart. */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .sprites__tile .sprites__label {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* Past the width where more columns stop helping — a row already shows more sprites than the eye
+   takes in — the extra room goes into the art instead of into another column of it. */
+@container (min-width: 760px) {
+  .sprites__branch {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  }
+
+  .sprites__tile {
+    contain-intrinsic-size: auto 180px;
+  }
 }
 
 .sprites__folder,

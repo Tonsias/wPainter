@@ -16,8 +16,10 @@ const SRC_ROOT = join(import.meta.dirname, '..', 'src');
 // (with a one-line reason) when a feature genuinely needs more than that.
 const CEILINGS = new Map([
   // The canvas host is where pan, wheel zoom, the stamp ghost and the selection marquee all
-  // land, and the toolbar grows a control per tool; 1200 left no room for the next one.
-  ['ui', { ceiling: 1400, reason: 'canvas host plus a toolbar that grows with every tool' }],
+  // land, and the toolbar grows a control per tool; 1200 left no room for the next one. The
+  // draggable panel then added a separator the shell has to carry: its own track in the grid,
+  // pointer and keyboard handling, and a re-clamp when the window changes size.
+  ['ui', { ceiling: 1550, reason: 'canvas host, a toolbar per tool, and a resizable panel' }],
 ]);
 
 // Applies to every top-level directory under src/ without its own entry above, and to `(root)`

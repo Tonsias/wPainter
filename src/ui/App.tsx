@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import './App.css'
 import { LayerPanel } from '../document/LayerPanel.tsx'
 import { decodeImageFile, exportPng } from '../document/composite.ts'
@@ -29,11 +29,26 @@ import { SpritePanel } from '../sprites/SpritePanel.tsx'
 import { indexSprites, loadSpriteImage } from '../sprites/loadSprites.ts'
 import type { Sprite, SpriteScale } from '../sprites/library.ts'
 import { PaintCanvas, type Point } from './PaintCanvas.tsx'
+import {
+  DEFAULT_PANEL_WIDTH,
+  PANEL_WIDTH_STEP,
+  RESIZER_WIDTH,
+  clampPanelWidth,
+} from './panel.ts'
 import { Toolbar } from './Toolbar.tsx'
 import { TOOL_KEYS, type BrushSize, type Tool } from './tools.ts'
 import { ZOOMS, fitZoom, type Zoom } from './zoom.ts'
 
 const DEFAULT_SIZE = 128
+
+// What the stage and the panel have to share: the grid's own content box less the separator and
+// the gaps on both sides of it. Measured from the container and not from the two columns, because
+// a panel already too wide has squeezed the stage to nothing and would read as room it never had.
+function panelRoom(main: HTMLElement): number {
+  const style = getComputedStyle(main)
+  const inner = main.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+  return inner - RESIZER_WIDTH - 2 * parseFloat(style.columnGap)
+}
 
 // The frame padding the fit calculation has to leave for, so a freshly imported template is not
 // zoomed to exactly the point where the host starts scrolling.
@@ -59,9 +74,15 @@ export function App() {
   const [spriteScale, setSpriteScale] = useState<SpriteScale>(1)
   const [spritesSkipped, setSpritesSkipped] = useState(0)
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [error, setError] = useState<string | null>(null)
 
   const slotRef = useRef<HTMLDivElement>(null)
+  const mainRef = useRef<HTMLElement>(null)
+  // Where the pointer would have to be for the panel to be zero wide, fixed when the drag starts:
+  // it takes the grab offset inside the separator out of the arithmetic, so the handle tracks the
+  // cursor exactly instead of jumping by half its own width on the first move.
+  const panelDragRef = useRef(0)
   // A stroke is one undo step: the snapshot is taken on its first point, not on every move.
   const strokeRef = useRef(false)
   const lastRef = useRef<Point | null>(null)
@@ -289,6 +310,21 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [stepHistory, pickTool])
 
+  // The one way the panel is ever resized, whether by drag, by arrow key or by the window changing
+  // under it: the room the two columns share is measured rather than assumed, because only the
+  // layout knows what the tool rail, the gaps and the shell's padding have already taken.
+  const resizePanel = useCallback((next: (current: number) => number) => {
+    const main = mainRef.current
+    if (!main) return
+    setPanelWidth((current) => clampPanelWidth(next(current), panelRoom(main)))
+  }, [])
+
+  useEffect(() => {
+    const onResize = () => resizePanel((current) => current)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [resizePanel])
+
   const clampSide = (value: number) =>
     Math.min(Math.max(Math.round(value) || 1, 1), MAX_CANVAS_SIDE)
 
@@ -311,7 +347,16 @@ export function App() {
         onExpertExport={(mask) => void expertExportPng(mask)}
       />
 
-      <main className="app__main">
+      <main
+        className="app__main"
+        ref={mainRef}
+        style={
+          {
+            '--app-panel-width': `${panelWidth}px`,
+            '--app-resizer-width': `${RESIZER_WIDTH}px`,
+          } as CSSProperties
+        }
+      >
         <section className="app__stage">
           <div className="app__frame-slot" ref={slotRef}>
             <div className="app__frame-box">
@@ -365,6 +410,34 @@ export function App() {
             </label>
           </div>
         </section>
+
+        <div
+          className="app__resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Panel width"
+          aria-valuenow={panelWidth}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            // Pointer capture routes the moves here, but it does not stop the press from starting
+            // a text selection that then drags across the panel.
+            event.preventDefault()
+            event.currentTarget.setPointerCapture(event.pointerId)
+            panelDragRef.current = event.clientX + panelWidth
+          }}
+          onPointerMove={(event) => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+            const { clientX } = event
+            resizePanel(() => panelDragRef.current - clientX)
+          }}
+          onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+          onKeyDown={(event) => {
+            const step = { ArrowLeft: PANEL_WIDTH_STEP, ArrowRight: -PANEL_WIDTH_STEP }[event.key]
+            if (step === undefined) return
+            event.preventDefault()
+            resizePanel((current) => current + step)
+          }}
+        />
 
         <aside className="app__panel">
           <h2 className="app__panel-title">Canvas</h2>
