@@ -16,6 +16,7 @@ import {
   floodFill,
   paintLine,
   paintOutlineLine,
+  scalePixelBuffer,
   stamp,
   stampOrigin,
   type PixelBuffer,
@@ -25,8 +26,8 @@ import { PalettePanel, type ColorSlot } from '../palette/PalettePanel.tsx'
 import { quantizeRgba, remapPixels, remapTable } from '../palette/quantize.ts'
 import { EMPTY_PIXEL, FREE_COLOR_COUNT, WPLACE_COLORS } from '../palette/wplace.ts'
 import { SpritePanel } from '../sprites/SpritePanel.tsx'
-import { loadSprites } from '../sprites/loadSprites.ts'
-import type { Sprite } from '../sprites/library.ts'
+import { indexSprites, loadSpriteImage } from '../sprites/loadSprites.ts'
+import type { Sprite, SpriteScale } from '../sprites/library.ts'
 import { PaintCanvas, type Point } from './PaintCanvas.tsx'
 import { Toolbar } from './Toolbar.tsx'
 import { TOOL_KEYS, type BrushSize, type Tool } from './tools.ts'
@@ -54,13 +55,9 @@ export function App() {
   const [selection, setSelection] = useState<Rect | null>(null)
   const [sprites, setSprites] = useState<readonly Sprite[]>([])
   const [spriteId, setSpriteId] = useState<string | null>(null)
-  const [spriteLoad, setSpriteLoad] = useState({
-    loading: false,
-    processed: 0,
-    total: 0,
-    skipped: 0,
-    issues: [] as string[],
-  })
+  const [spriteImage, setSpriteImage] = useState<PixelBuffer | null>(null)
+  const [spriteScale, setSpriteScale] = useState<SpriteScale>(1)
+  const [spritesSkipped, setSpritesSkipped] = useState(0)
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
   const [error, setError] = useState<string | null>(null)
 
@@ -86,14 +83,33 @@ export function App() {
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
   const sprite = sprites.find((item) => item.id === spriteId) ?? null
+
+  // The picked sprite is the one file the library decodes on demand rather than on view; until it
+  // comes back there is simply no stamp, which is also what an undecodable file leaves behind.
+  useEffect(() => {
+    if (!sprite) {
+      setSpriteImage(null)
+      return
+    }
+    let cancelled = false
+    void loadSpriteImage(sprite).then((image) => {
+      if (!cancelled) setSpriteImage(image)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [sprite])
+
+  // Scaling here and not inside `stamp` is what keeps the ghost under the cursor honest: the
+  // preview, the origin it is centred on and the pixels laid down all read the same buffer.
   const stampBuffer: PixelBuffer | null = useMemo(
     () =>
-      sprite && {
-        pixels: remapPixels(sprite.pixels, remap),
-        width: sprite.width,
-        height: sprite.height,
-      },
-    [sprite, remap],
+      spriteImage &&
+      scalePixelBuffer(
+        { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
+        spriteScale,
+      ),
+    [spriteImage, remap, spriteScale],
   )
 
   // The clone has to happen here and now: a stroke mutates the layer buffer in place, so a clone
@@ -411,40 +427,19 @@ export function App() {
           <SpritePanel
             sprites={sprites}
             activeId={spriteId}
-            loading={spriteLoad.loading}
-            processed={spriteLoad.processed}
-            total={spriteLoad.total}
-            skipped={spriteLoad.skipped}
-            issues={spriteLoad.issues}
+            skipped={spritesSkipped}
+            scale={spriteScale}
             onLoad={(files) => {
-              setSprites([])
-              setSpriteId(null)
-              setSpriteLoad({ loading: true, processed: 0, total: 0, skipped: 0, issues: [] })
-              void loadSprites(files, (progress) => {
-                setSprites(progress.sprites)
-                setSpriteId((current) => current ?? progress.sprites[0]?.id ?? null)
-                setSpriteLoad((current) => ({
-                  ...current,
-                  loading: true,
-                  processed: progress.processed,
-                  total: progress.total,
-                  skipped: progress.skipped,
-                }))
-              }).then((result) => {
-                setSprites(result.sprites)
-                setSpriteId((current) => current ?? result.sprites[0]?.id ?? null)
-                setSpriteLoad((current) => ({
-                  ...current,
-                  loading: false,
-                  skipped: result.skipped,
-                  issues: result.issues,
-                }))
-              })
+              const indexed = indexSprites(files)
+              setSprites(indexed)
+              setSpriteId(indexed[0]?.id ?? null)
+              setSpritesSkipped(files.length - indexed.length)
             }}
             onPick={(picked) => {
               setSpriteId(picked.id)
               pickTool('stamp')
             }}
+            onScale={setSpriteScale}
           />
         </aside>
       </main>

@@ -1,12 +1,20 @@
+// A row in the tree, not an image: the file is held unread, and its pixels only exist once
+// something asks `loadSpriteImage` for them. That is what lets a folder of thousands open at once.
 export type Sprite = {
   readonly id: string
   readonly name: string
   readonly folder: string
-  readonly width: number
-  readonly height: number
-  // Palette index + 1, exactly like a layer's buffer, so stamping is a plain copy.
-  readonly pixels: Uint8Array
+  readonly file: File
 }
+
+// Nearest-neighbour factors, so an up-scale stays on whole source pixels; the ones below 1 are
+// there for a sprite that arrives larger than the template it has to fit into. A third is spelled
+// out rather than written `1 / 3`, because `as const` keeps a literal literal but not an expression.
+export const SPRITE_SCALES = [0.25, 0.3333333333333333, 0.5, 1, 2, 3, 4, 6, 8] as const
+export type SpriteScale = (typeof SPRITE_SCALES)[number]
+
+export const spriteScaleLabel = (scale: SpriteScale): string =>
+  scale < 1 ? `1/${Math.round(1 / scale)}` : `${scale}×`
 
 // The picked directory itself is the root: its `path` and `name` are empty, and only its
 // children carry a folder name.

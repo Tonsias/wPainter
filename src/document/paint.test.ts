@@ -4,6 +4,7 @@ import {
   paintDot,
   paintLine,
   paintOutlineLine,
+  scalePixelBuffer,
   stamp,
   stampOrigin,
   type PixelBuffer,
@@ -109,5 +110,30 @@ describe('paintOutlineLine', () => {
     const target = buffer(3, 3, 4)
     paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
     expect(target.pixels[4]).toBe(7)
+  })
+})
+
+describe('scalePixelBuffer', () => {
+  const source = { pixels: Uint8Array.from([1, 2, 3, 4]), width: 2, height: 2 }
+
+  it('hands back the very same buffer at scale 1', () => {
+    expect(scalePixelBuffer(source, 1)).toBe(source)
+  })
+
+  it('repeats each source pixel into a square block when scaling up', () => {
+    const scaled = scalePixelBuffer(source, 2)
+    expect([scaled.width, scaled.height]).toEqual([4, 4])
+    expect([...scaled.pixels]).toEqual([1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4])
+  })
+
+  it('samples rather than blends when scaling down, so every value stays a palette index', () => {
+    const scaled = scalePixelBuffer(source, 0.5)
+    expect([scaled.width, scaled.height]).toEqual([1, 1])
+    expect([...scaled.pixels]).toEqual([1])
+  })
+
+  it('never scales a buffer away to nothing', () => {
+    const scaled = scalePixelBuffer({ pixels: new Uint8Array(1), width: 1, height: 1 }, 0.25)
+    expect([scaled.width, scaled.height]).toEqual([1, 1])
   })
 })

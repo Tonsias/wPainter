@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { buildSpriteTree, countSprites, matchesQuery, splitSpritePath, type Sprite } from './library.ts'
+import {
+  SPRITE_SCALES,
+  buildSpriteTree,
+  countSprites,
+  matchesQuery,
+  splitSpritePath,
+  spriteScaleLabel,
+  type Sprite,
+} from './library.ts'
 
 const sprite = (folder: string, name: string): Sprite => ({
   id: `${folder}/${name}`,
   name,
   folder,
-  width: 1,
-  height: 1,
-  pixels: new Uint8Array(1),
+  file: new File([], `${name}.png`),
 })
 
 describe('splitSpritePath', () => {
@@ -59,5 +65,21 @@ describe('matchesQuery', () => {
     expect(matchesQuery(sprite('Trees', 'Oak'), 'OAK')).toBe(true)
     expect(matchesQuery(sprite('Trees', 'Oak'), 'rock')).toBe(false)
     expect(matchesQuery(sprite('Trees', 'Oak'), '  ')).toBe(true)
+  })
+})
+
+describe('spriteScaleLabel', () => {
+  it('names every step without letting a repeating fraction leak into the label', () => {
+    expect(SPRITE_SCALES.map(spriteScaleLabel)).toEqual([
+      '1/4',
+      '1/3',
+      '1/2',
+      '1×',
+      '2×',
+      '3×',
+      '4×',
+      '6×',
+      '8×',
+    ])
   })
 })

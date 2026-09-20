@@ -6,14 +6,11 @@ export type PixelBuffer = {
   readonly height: number
 }
 
-let stampScale = 1
-
-export function setStampScale(scale: number) {
-  stampScale = Math.max(0.1, Math.min(8, scale))
-}
-
-export function scalePixelBuffer(source: PixelBuffer, factor: number): PixelBuffer {
-  const scale = Math.max(0.1, Math.min(8, factor))
+// Nearest neighbour, because the result has to stay inside the palette: any interpolation would
+// invent colours wplace cannot place. Scale 1 returns the source untouched, so the stamp preview
+// redrawn on every pointer move costs nothing at the default scale.
+export function scalePixelBuffer(source: PixelBuffer, scale: number): PixelBuffer {
+  if (scale === 1) return source
   const width = Math.max(1, Math.round(source.width * scale))
   const height = Math.max(1, Math.round(source.height * scale))
   const pixels = new Uint8Array(width * height)
@@ -131,20 +128,22 @@ export function floodFill(target: PixelBuffer, x: number, y: number, value: numb
   }
 }
 
+// Holes in the sprite stay holes in the target: a stamp composites, it does not blit a rectangle.
+// The source arrives already scaled, so what is previewed and what is laid down cannot drift.
 export function stamp(target: PixelBuffer, source: PixelBuffer, atX: number, atY: number) {
-  const scaled = stampScale === 1 ? source : scalePixelBuffer(source, stampScale)
-  for (let y = 0; y < scaled.height; y += 1) {
+  for (let y = 0; y < source.height; y += 1) {
     const py = atY + y
     if (py < 0 || py >= target.height) continue
-    for (let x = 0; x < scaled.width; x += 1) {
+    for (let x = 0; x < source.width; x += 1) {
       const px = atX + x
       if (px < 0 || px >= target.width) continue
-      const value = scaled.pixels[y * scaled.width + x]
+      const value = source.pixels[y * source.width + x]
       if (value !== EMPTY_PIXEL) target.pixels[py * target.width + px] = value
     }
   }
 }
 
+// Top-left of a stamp centred on the cursor.
 export function stampOrigin(cursor: number, extent: number): number {
   return cursor - Math.floor(extent / 2)
 }

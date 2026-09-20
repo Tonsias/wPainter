@@ -33,15 +33,14 @@
   border-radius: 999px;
 }
 
-.sprites__scale {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: 12px;
+/* The shared segment primitive sized down for a side panel: eight steps have to fit a column
+   narrower than the stage bar the zoom segment lives in. */
+.sprites__scale .segment__option {
+  min-width: 0;
+  flex: 1;
+  padding: 0 4px;
+  font-size: 11px;
 }
-
-.sprites__scale input[type='range'] { flex: 1; min-width: 70px; }
-.sprites__scale-value { width: 56px; }
 
 .sprites__note {
   margin: 0;
