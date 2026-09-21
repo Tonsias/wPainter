@@ -35,7 +35,12 @@ const CEILINGS = new Map([
   // The outline brush turned its one edge colour into up to four rings painted outwards, each
   // refusing the colours inside it; the ring geometry and what it promises across a dragged
   // stroke is most of what the extra lines are, and it is all tested.
-  ['document', { ceiling: 1300, reason: 'the outline brush rings and the tests that pin them' }],
+  // The stamp then grew a ring of its own: a flood outwards from every painted pixel onto a
+  // buffer grown to hold it, which is a different shape from the brush's nib-per-step rings.
+  [
+    'document',
+    { ceiling: 1400, reason: 'the outline brush rings, the stamp ring, and the tests that pin them' },
+  ],
 ]);
 
 // Applies to every top-level directory under src/ without its own entry above, and to `(root)`
@@ -51,8 +56,9 @@ const DEFAULT_CEILING = 1200;
 // swap the buttons used to do inline. Raised once more for the toolbar's icon set, which is
 // drawing data rather than logic — the alternative was a dependency. Raised once more for the
 // scatter mix's per-colour ratio: a weight beside every picked colour, the slider that sets it,
-// and the draw the weights expand into.
-const TOTAL_CEILING = 4560;
+// and the draw the weights expand into. Raised once more for a ring around a stamped sprite,
+// which is the same edge colours the outline brush uses grown around the sprite's own shape.
+const TOTAL_CEILING = 4680;
 
 function listSourceFiles(dir) {
   const out = [];

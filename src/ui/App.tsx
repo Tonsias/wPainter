@@ -20,6 +20,7 @@ import {
   expandMix,
   floodFill,
   orientPixelBuffer,
+  outlinePixelBuffer,
   paintLine,
   paintOutlineLine,
   paintScatterLine,
@@ -105,6 +106,7 @@ export function App() {
   const [spriteImage, setSpriteImage] = useState<PixelBuffer | null>(null)
   const [spriteScale, setSpriteScale] = useState<SpriteScale>(1)
   const [spriteOrientation, setSpriteOrientation] = useState<Orientation>(UNTURNED)
+  const [spriteOutlined, setSpriteOutlined] = useState(false)
   const [spritesSkipped, setSpritesSkipped] = useState(0)
   const [size, setSize] = useState({ width: DEFAULT_SIZE, height: DEFAULT_SIZE })
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
@@ -191,18 +193,24 @@ export function App() {
   }, [sprite])
 
   // Scaling here and not inside `stamp` is what keeps the ghost under the cursor honest: the
-  // preview, the origin it is centred on and the pixels laid down all read the same buffer.
+  // preview, the origin it is centred on and the pixels laid down all read the same buffer. The
+  // ring comes last, after the scale, so it is one template pixel thick whatever the sprite was
+  // blown up by — and because it widens the buffer, it also moves the origin the stamp is
+  // centred on, which only holds while the whole chain stays in this one place.
   const stampBuffer: PixelBuffer | null = useMemo(
     () =>
       spriteImage &&
-      scalePixelBuffer(
-        orientPixelBuffer(
-          { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
-          spriteOrientation,
+      outlinePixelBuffer(
+        scalePixelBuffer(
+          orientPixelBuffer(
+            { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
+            spriteOrientation,
+          ),
+          spriteScale,
         ),
-        spriteScale,
+        spriteOutlined ? edgePixels.map((pixel) => remap[pixel]) : [],
       ),
-    [spriteImage, remap, spriteOrientation, spriteScale],
+    [spriteImage, remap, spriteOrientation, spriteScale, spriteOutlined, edgePixels],
   )
 
   // The clone has to happen here and now: a stroke mutates the layer buffer in place, so a clone
@@ -585,7 +593,7 @@ export function App() {
           <PanelSection title="Palette">
             <PalettePanel
               main={colorPixel}
-              edges={tool === 'outline' ? edgePixels : null}
+              edges={tool === 'outline' || (tool === 'stamp' && spriteOutlined) ? edgePixels : null}
               mix={tool === 'scatter' ? mixColors : null}
               slot={slot}
               colorCount={colorCount}
@@ -608,6 +616,7 @@ export function App() {
               skipped={spritesSkipped}
               scale={spriteScale}
               orientation={spriteOrientation}
+              outlined={spriteOutlined}
               onLoad={(files) => {
                 const indexed = indexSprites(files)
                 setSprites(indexed)
@@ -620,6 +629,12 @@ export function App() {
               }}
               onScale={setSpriteScale}
               onOrient={setSpriteOrientation}
+              onOutline={(outlined) => {
+                setSpriteOutlined(outlined)
+                // The ring's colours live in the palette's Edge slot, which the stamp shows only
+                // while this is on: switching to it is how the tick says where to pick them.
+                if (outlined) setSlot('edge')
+              }}
             />
           </section>
         </aside>

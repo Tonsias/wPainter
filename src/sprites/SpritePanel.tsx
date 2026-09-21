@@ -35,10 +35,12 @@ type Props = {
   skipped: number
   scale: SpriteScale
   orientation: Orientation
+  outlined: boolean
   onLoad: (files: SpriteFile[]) => void
   onPick: (sprite: Sprite) => void
   onScale: (scale: SpriteScale) => void
   onOrient: (orientation: Orientation) => void
+  onOutline: (outlined: boolean) => void
 }
 
 const TURNS = [
@@ -157,10 +159,12 @@ export function SpritePanel({
   skipped,
   scale,
   orientation,
+  outlined,
   onLoad,
   onPick,
   onScale,
   onOrient,
+  onOutline,
 }: Props) {
   const [query, setQuery] = useState('')
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
@@ -330,6 +334,17 @@ export function SpritePanel({
           </button>
         )}
       </div>
+      {/* The ring is drawn after the scale, so it stays one template pixel thick however far the
+          sprite is blown up. Its colours are the palette's Edge slot — the same set the outline
+          brush rings a stroke with, so a template keeps one edge colour across both tools. */}
+      <label className="app__check">
+        <input
+          type="checkbox"
+          checked={outlined}
+          onChange={(event) => onOutline(event.target.checked)}
+        />
+        Outline the stamp
+      </label>
       {note && <p className="sprites__note">{note}</p>}
       <div className="sprites__tree">
         {sprites.length > 0 && (

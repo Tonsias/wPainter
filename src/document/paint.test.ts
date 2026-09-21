@@ -9,6 +9,7 @@ import {
   paintOutlineLine,
   paintScatterLine,
   orientPixelBuffer,
+  outlinePixelBuffer,
   scatterPixel,
   rotateOrientation,
   scalePixelBuffer,
@@ -201,6 +202,38 @@ describe('paintOutlineLine', () => {
     const target = buffer(3, 3)
     paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [])
     expect([...target.pixels]).toEqual([0, 0, 0, 0, 7, 0, 0, 0, 0])
+  })
+})
+
+describe('outlinePixelBuffer', () => {
+  const dot: PixelBuffer = { pixels: Uint8Array.from([7]), width: 1, height: 1 }
+
+  it('hands back the very same buffer when no edge colour is picked', () => {
+    expect(outlinePixelBuffer(dot, [])).toBe(dot)
+  })
+
+  it('rings a single pixel on all eight sides and grows the buffer to fit', () => {
+    const ringed = outlinePixelBuffer(dot, [2])
+    expect([ringed.width, ringed.height]).toEqual([3, 3])
+    expect([...ringed.pixels]).toEqual([2, 2, 2, 2, 7, 2, 2, 2, 2])
+  })
+
+  it('lays several edge colours as concentric rings, innermost first', () => {
+    const ringed = outlinePixelBuffer(dot, [2, 3])
+    expect([ringed.width, ringed.height]).toEqual([5, 5])
+    expect([...ringed.pixels.slice(0, 5)]).toEqual([3, 3, 3, 3, 3])
+    expect([...ringed.pixels.slice(5, 10)]).toEqual([3, 2, 2, 2, 3])
+    expect(ringed.pixels[12]).toBe(7)
+  })
+
+  it('fills a hole inside the sprite, because a hole has an edge too', () => {
+    const ring: PixelBuffer = {
+      pixels: Uint8Array.from([7, 7, 7, 7, 0, 7, 7, 7, 7]),
+      width: 3,
+      height: 3,
+    }
+    const ringed = outlinePixelBuffer(ring, [2])
+    expect(ringed.pixels[12]).toBe(2)
   })
 })
 

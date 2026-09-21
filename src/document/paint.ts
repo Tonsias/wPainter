@@ -259,6 +259,53 @@ export function floodFill(target: PixelBuffer, x: number, y: number, value: numb
   }
 }
 
+// Eight-connected, so a diagonal staircase in the sprite is ringed at its corners too — a
+// four-connected test leaves those open and the outline reads as a dotted line.
+function touchesPainted(buffer: PixelBuffer, x: number, y: number): boolean {
+  for (let dy = -1; dy <= 1; dy += 1) {
+    const py = y + dy
+    if (py < 0 || py >= buffer.height) continue
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const px = x + dx
+      if (px < 0 || px >= buffer.width) continue
+      if (buffer.pixels[py * buffer.width + px] !== EMPTY_PIXEL) return true
+    }
+  }
+  return false
+}
+
+// A ring around everything the sprite draws, holes included, laid down on a buffer grown by one
+// pixel per ring so the outermost one still has room. Each ring is collected before it is
+// written: growing in place would let a ring feed on itself and race outwards across the row.
+// Applied after the scale, which is what keeps a ring one target pixel thick at every zoom.
+export function outlinePixelBuffer(
+  source: PixelBuffer,
+  edges: readonly number[],
+): PixelBuffer {
+  const rings = edges.slice(0, MAX_OUTLINE_COLORS)
+  if (rings.length === 0) return source
+  const width = source.width + 2 * rings.length
+  const height = source.height + 2 * rings.length
+  const pixels = new Uint8Array(width * height)
+  for (let y = 0; y < source.height; y += 1) {
+    for (let x = 0; x < source.width; x += 1) {
+      pixels[(y + rings.length) * width + x + rings.length] = source.pixels[y * source.width + x]
+    }
+  }
+  const grown: PixelBuffer = { pixels, width, height }
+  for (const value of rings) {
+    const ring: number[] = []
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = y * width + x
+        if (pixels[index] === EMPTY_PIXEL && touchesPainted(grown, x, y)) ring.push(index)
+      }
+    }
+    for (const index of ring) pixels[index] = value
+  }
+  return grown
+}
+
 // Holes in the sprite stay holes in the target: a stamp composites, it does not blit a rectangle.
 // The source arrives already scaled, so what is previewed and what is laid down cannot drift.
 export function stamp(target: PixelBuffer, source: PixelBuffer, atX: number, atY: number) {
