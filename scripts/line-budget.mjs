@@ -31,6 +31,10 @@ const CEILINGS = new Map([
       reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set',
     },
   ],
+  // The outline brush turned its one edge colour into up to four rings painted outwards, each
+  // refusing the colours inside it; the ring geometry and what it promises across a dragged
+  // stroke is most of what the extra lines are, and it is all tested.
+  ['document', { ceiling: 1300, reason: 'the outline brush rings and the tests that pin them' }],
 ]);
 
 // Applies to every top-level directory under src/ without its own entry above, and to `(root)`

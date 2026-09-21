@@ -136,26 +136,51 @@ describe('stampOrigin', () => {
 describe('paintOutlineLine', () => {
   it('rings a single dot with the edge colour', () => {
     const target = buffer(3, 3)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
     expect([...target.pixels]).toEqual([4, 4, 4, 4, 7, 4, 4, 4, 4])
   })
 
   it('keeps the fill unbroken along a dragged stroke', () => {
     const target = buffer(5, 3)
-    paintOutlineLine(target, 1, 1, 3, 1, 1, 7, 4)
+    paintOutlineLine(target, 1, 1, 3, 1, 1, 7, [4])
     expect([...target.pixels]).toEqual([4, 4, 4, 4, 4, 4, 7, 7, 7, 4, 4, 4, 4, 4, 4])
   })
 
   it('never lets the edge overwrite fill that is already down', () => {
     const target = buffer(3, 3, 7)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
     expect([...target.pixels]).toEqual([7, 7, 7, 7, 7, 7, 7, 7, 7])
   })
 
   it('lets the fill overwrite anything, edge colour included', () => {
     const target = buffer(3, 3, 4)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, 4)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
     expect(target.pixels[4]).toBe(7)
+  })
+
+  it('paints one ring per colour, outwards from the fill', () => {
+    const target = buffer(7, 7)
+    paintOutlineLine(target, 3, 3, 3, 3, 1, 7, [4, 5, 6])
+    expect([...target.pixels.slice(21, 28)]).toEqual([6, 5, 4, 7, 4, 5, 6])
+    expect([...target.pixels.slice(0, 7)]).toEqual([6, 6, 6, 6, 6, 6, 6])
+  })
+
+  it('drops the colours past the fourth', () => {
+    const target = buffer(13, 13)
+    paintOutlineLine(target, 6, 6, 6, 6, 1, 7, [1, 2, 3, 4, 5])
+    expect([...target.pixels.slice(78, 91)]).toEqual([0, 0, 4, 3, 2, 1, 7, 1, 2, 3, 4, 0, 0])
+  })
+
+  it('keeps an outer ring off the inner rings the stroke already laid down', () => {
+    const target = buffer(9, 5)
+    paintOutlineLine(target, 2, 2, 6, 2, 1, 7, [4, 5])
+    expect([...target.pixels.slice(18, 27)]).toEqual([5, 4, 7, 7, 7, 7, 7, 4, 5])
+  })
+
+  it('paints a plain line when no edge colour is picked', () => {
+    const target = buffer(3, 3)
+    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [])
+    expect([...target.pixels]).toEqual([0, 0, 0, 0, 7, 0, 0, 0, 0])
   })
 })
 

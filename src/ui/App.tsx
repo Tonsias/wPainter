@@ -14,6 +14,7 @@ import {
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
 import {
+  MAX_OUTLINE_COLORS,
   UNTURNED,
   floodFill,
   orientPixelBuffer,
@@ -78,8 +79,9 @@ export function App() {
   const [history, setHistory] = useState<History>(EMPTY_HISTORY)
   const [tool, setTool] = useState<Tool>('brush')
   const [colorPixel, setColorPixel] = useState(1)
-  // White by default: an outline in the same colour as its fill would not be an outline.
-  const [edgePixel, setEdgePixel] = useState(5)
+  // White by default: an outline in the same colour as its fill would not be an outline. Order
+  // is ring order, so the list reads from the fill outwards.
+  const [edgePixels, setEdgePixels] = useState<readonly number[]>([5])
   const [slot, setSlot] = useState<ColorSlot>('main')
   // The scatter brush's palette. Black, gray and white so the tool draws something recognisable
   // before the user has touched the mix; an emptied mix simply paints nothing.
@@ -125,13 +127,18 @@ export function App() {
     setSlot(next === 'scatter' ? 'mix' : 'main')
   }, [])
 
-  const setSlotColor = (pixel: number) =>
-    slot === 'edge' ? setEdgePixel(pixel) : setColorPixel(pixel)
-
-  const toggleMix = (pixel: number) =>
-    setMixPixels((current) =>
-      current.includes(pixel) ? current.filter((item) => item !== pixel) : [...current, pixel],
-    )
+  // A colour already in the set leaves it; a new one joins at the end, which for the outline is
+  // the ring furthest out. The cap is what stops the nib growing past what the brush can draw.
+  const toggleSlotColor = (pixel: number) => {
+    const toggle = (cap: number) => (current: readonly number[]) =>
+      current.includes(pixel)
+        ? current.filter((item) => item !== pixel)
+        : current.length < cap
+          ? [...current, pixel]
+          : current
+    if (slot === 'edge') setEdgePixels(toggle(MAX_OUTLINE_COLORS))
+    else setMixPixels(toggle(WPLACE_COLORS.length))
+  }
 
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
@@ -216,7 +223,7 @@ export function App() {
     if (tool === 'picker') {
       if (!inside) return
       const value = layer.pixels[point.y * doc.width + point.x]
-      if (value !== EMPTY_PIXEL) setSlotColor(remap[value])
+      if (value !== EMPTY_PIXEL) setColorPixel(remap[value])
       return
     }
 
@@ -271,7 +278,7 @@ export function App() {
       paintScatterLine(target, from.x, from.y, point.x, point.y, brushSize, mix, seedRef.current)
     } else if (tool === 'outline') {
       const from = lastRef.current ?? point
-      paintOutlineLine(target, from.x, from.y, point.x, point.y, brushSize, colorPixel, edgePixel)
+      paintOutlineLine(target, from.x, from.y, point.x, point.y, brushSize, colorPixel, edgePixels)
     } else {
       const from = lastRef.current ?? point
       const value = tool === 'eraser' ? EMPTY_PIXEL : colorPixel
@@ -551,13 +558,13 @@ export function App() {
           <PanelSection title="Palette">
             <PalettePanel
               main={colorPixel}
-              edge={tool === 'outline' ? edgePixel : null}
+              edges={tool === 'outline' ? edgePixels : null}
               mix={tool === 'scatter' ? mixPixels : null}
               slot={slot}
               colorCount={colorCount}
               onSlot={setSlot}
-              onChange={setSlotColor}
-              onToggleMix={toggleMix}
+              onChange={setColorPixel}
+              onToggle={toggleSlotColor}
             />
           </PanelSection>
 

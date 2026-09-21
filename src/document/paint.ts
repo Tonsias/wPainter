@@ -104,10 +104,10 @@ export function paintDot(
   y: number,
   size: number,
   value: number,
-  protect?: number,
+  protect?: readonly number[],
 ) {
   eachDotPixel(target, x, y, size, (index) => {
-    if (target.pixels[index] === protect) return
+    if (protect?.includes(target.pixels[index])) return
     target.pixels[index] = value
   })
 }
@@ -187,6 +187,12 @@ export function paintLine(
   walkLine(fromX, fromY, toX, toY, (x, y) => paintDot(target, x, y, size, value))
 }
 
+export const MAX_OUTLINE_COLORS = 4
+
+// Each edge colour is one ring, two pixels wider than the one inside it. A step lays them
+// outermost first so the inner colours win where its own nibs overlap, and every ring refuses
+// the colours inside it so the *next* step cannot eat the fill and rings already drawn — a pixel
+// only ever moves inwards as the stroke advances, never back out.
 export function paintOutlineLine(
   target: PixelBuffer,
   fromX: number,
@@ -195,10 +201,17 @@ export function paintOutlineLine(
   toY: number,
   size: number,
   fill: number,
-  edge: number,
+  edges: readonly number[],
 ) {
+  const rings = edges.slice(0, MAX_OUTLINE_COLORS).map((value, index) => ({
+    value,
+    size: size + 2 * (index + 1),
+    inside: [fill, ...edges.slice(0, index)],
+  }))
   walkLine(fromX, fromY, toX, toY, (x, y) => {
-    paintDot(target, x, y, size + 2, edge, fill)
+    for (let index = rings.length - 1; index >= 0; index -= 1) {
+      paintDot(target, x, y, rings[index].size, rings[index].value, rings[index].inside)
+    }
     paintDot(target, x, y, size, fill)
   })
 }
