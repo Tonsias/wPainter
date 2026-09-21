@@ -33,8 +33,10 @@ const DEFAULT_CEILING = 1200;
 
 // Checked separately from the per-directory ceilings so a reader sees the whole promise, not
 // only the parts: src/ as a whole stays small enough to read in one context window. Raised for
-// the stamp's eight orientations, whose exhaustive tests are most of what it bought.
-const TOTAL_CEILING = 3900;
+// the stamp's eight orientations, whose exhaustive tests are most of what it bought, and again
+// for the scatter brush: a palette slot that holds a set rather than one colour, plus the tests
+// that pin its stroke down as reproducible.
+const TOTAL_CEILING = 4150;
 
 function listSourceFiles(dir) {
   const out = [];

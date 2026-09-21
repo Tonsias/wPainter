@@ -1,9 +1,20 @@
-export const TOOLS = ['brush', 'outline', 'eraser', 'fill', 'picker', 'stamp', 'select', 'move'] as const
+export const TOOLS = [
+  'brush',
+  'outline',
+  'scatter',
+  'eraser',
+  'fill',
+  'picker',
+  'stamp',
+  'select',
+  'move',
+] as const
 export type Tool = (typeof TOOLS)[number]
 
 export const TOOL_LABELS: Record<Tool, string> = {
   brush: 'Brush',
   outline: 'Outline',
+  scatter: 'Scatter',
   eraser: 'Eraser',
   fill: 'Fill',
   picker: 'Pick',
@@ -16,6 +27,7 @@ export const TOOL_LABELS: Record<Tool, string> = {
 export const TOOL_KEYS: Record<string, Tool> = {
   b: 'brush',
   o: 'outline',
+  r: 'scatter',
   e: 'eraser',
   f: 'fill',
   i: 'picker',

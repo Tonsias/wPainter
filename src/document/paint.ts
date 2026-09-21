@@ -78,13 +78,13 @@ export function orientPixelBuffer(source: PixelBuffer, orientation: Orientation)
   return { pixels, width, height }
 }
 
-export function paintDot(
+// The clipped span of a nib of `size` centred on (x, y) — the bounds arithmetic every dot shares.
+function eachDotPixel(
   target: PixelBuffer,
   x: number,
   y: number,
   size: number,
-  value: number,
-  protect?: number,
+  visit: (index: number, px: number, py: number) => void,
 ) {
   const start = -Math.floor((size - 1) / 2)
   for (let dy = 0; dy < size; dy += 1) {
@@ -93,11 +93,57 @@ export function paintDot(
     for (let dx = 0; dx < size; dx += 1) {
       const px = x + start + dx
       if (px < 0 || px >= target.width) continue
-      const index = py * target.width + px
-      if (target.pixels[index] === protect) continue
-      target.pixels[index] = value
+      visit(py * target.width + px, px, py)
     }
   }
+}
+
+export function paintDot(
+  target: PixelBuffer,
+  x: number,
+  y: number,
+  size: number,
+  value: number,
+  protect?: number,
+) {
+  eachDotPixel(target, x, y, size, (index) => {
+    if (target.pixels[index] === protect) return
+    target.pixels[index] = value
+  })
+}
+
+// Which colour of the mix a pixel gets, as a hash of its own coordinates and the stroke's seed
+// rather than a draw from a generator: the nibs walked along a line overlap, and re-rolling a
+// pixel every time one covers it makes the stroke boil under the cursor instead of settling.
+// The seed is what still makes two strokes over the same pixels differ.
+export function scatterPixel(
+  seed: number,
+  x: number,
+  y: number,
+  mix: readonly number[],
+): number {
+  let hash = seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)
+  hash = Math.imul(hash ^ (hash >>> 15), 0x2545f491)
+  hash ^= hash >>> 13
+  return mix[(hash >>> 0) % mix.length]
+}
+
+export function paintScatterLine(
+  target: PixelBuffer,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  size: number,
+  mix: readonly number[],
+  seed: number,
+) {
+  if (mix.length === 0) return
+  walkLine(fromX, fromY, toX, toY, (x, y) => {
+    eachDotPixel(target, x, y, size, (index, px, py) => {
+      target.pixels[index] = scatterPixel(seed, px, py, mix)
+    })
+  })
 }
 
 function walkLine(

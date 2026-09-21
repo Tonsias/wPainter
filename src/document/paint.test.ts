@@ -6,7 +6,9 @@ import {
   paintDot,
   paintLine,
   paintOutlineLine,
+  paintScatterLine,
   orientPixelBuffer,
+  scatterPixel,
   rotateOrientation,
   scalePixelBuffer,
   stamp,
@@ -47,6 +49,46 @@ describe('paintLine', () => {
     const target = buffer(3, 3)
     paintLine(target, 1, 1, 1, 1, 1, 3)
     expect([...target.pixels].filter(Boolean)).toHaveLength(1)
+  })
+})
+
+describe('scatter', () => {
+  const mix = [2, 4, 6]
+
+  it('draws only colours the mix contains', () => {
+    const target = buffer(8, 8)
+    paintScatterLine(target, 0, 0, 7, 7, 4, mix, 12345)
+    const painted = [...target.pixels].filter((value) => value !== 0)
+    expect(painted.length).toBeGreaterThan(0)
+    expect(painted.every((value) => mix.includes(value))).toBe(true)
+  })
+
+  it('gives a pixel the same colour however often a stroke covers it', () => {
+    const once = buffer(6, 6)
+    paintScatterLine(once, 3, 3, 3, 3, 3, mix, 99)
+    const twice = buffer(6, 6)
+    paintScatterLine(twice, 0, 3, 5, 3, 3, mix, 99)
+    expect(twice.pixels[3 * 6 + 3]).toBe(once.pixels[3 * 6 + 3])
+  })
+
+  it('lands differently for a different seed', () => {
+    const a = buffer(16, 16)
+    const b = buffer(16, 16)
+    paintScatterLine(a, 0, 0, 15, 15, 8, mix, 1)
+    paintScatterLine(b, 0, 0, 15, 15, 8, mix, 2)
+    expect([...a.pixels]).not.toEqual([...b.pixels])
+  })
+
+  it('reaches every colour of the mix over enough pixels', () => {
+    const drawn = new Set<number>()
+    for (let x = 0; x < 200; x += 1) drawn.add(scatterPixel(7, x, 0, mix))
+    expect([...drawn].sort()).toEqual(mix)
+  })
+
+  it('leaves the layer alone when the mix is empty', () => {
+    const target = buffer(4, 4)
+    paintScatterLine(target, 0, 0, 3, 3, 2, [], 5)
+    expect([...target.pixels].every((value) => value === 0)).toBe(true)
   })
 })
 

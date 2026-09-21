@@ -19,6 +19,7 @@ import {
   orientPixelBuffer,
   paintLine,
   paintOutlineLine,
+  paintScatterLine,
   scalePixelBuffer,
   stamp,
   stampOrigin,
@@ -80,6 +81,9 @@ export function App() {
   // White by default: an outline in the same colour as its fill would not be an outline.
   const [edgePixel, setEdgePixel] = useState(5)
   const [slot, setSlot] = useState<ColorSlot>('main')
+  // The scatter brush's palette. Black, gray and white so the tool draws something recognisable
+  // before the user has touched the mix; an emptied mix simply paints nothing.
+  const [mixPixels, setMixPixels] = useState<readonly number[]>([1, 3, 5])
   const [brushSize, setBrushSize] = useState<BrushSize>(1)
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
@@ -104,6 +108,9 @@ export function App() {
   const panelDragRef = useRef(0)
   // A stroke is one undo step: the snapshot is taken on its first point, not on every move.
   const strokeRef = useRef(false)
+  // One seed per stroke, so a scatter stroke keeps the pattern it had while it was drawn and a
+  // second stroke over the same pixels still lands differently.
+  const seedRef = useRef(0)
   const lastRef = useRef<Point | null>(null)
   const startRef = useRef<Point | null>(null)
   // A move reads from the layer as it stood when the drag began; `delta` survives the drag so
@@ -112,16 +119,25 @@ export function App() {
 
   const pickTool = useCallback((next: Tool) => {
     setTool(next)
-    // The edge slot exists only while the outline brush is in hand; leaving it selected would
-    // point the palette at a colour the panel no longer shows.
-    if (next !== 'outline') setSlot('main')
+    // The extra slots exist only while the tool that reads them is in hand; leaving one selected
+    // would point the palette at a colour the panel no longer shows. Scatter goes straight to its
+    // mix, because its main colour is the one thing it never draws with.
+    setSlot(next === 'scatter' ? 'mix' : 'main')
   }, [])
 
   const setSlotColor = (pixel: number) =>
     slot === 'edge' ? setEdgePixel(pixel) : setColorPixel(pixel)
 
+  const toggleMix = (pixel: number) =>
+    setMixPixels((current) =>
+      current.includes(pixel) ? current.filter((item) => item !== pixel) : [...current, pixel],
+    )
+
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
+  // Through the same table the stamp uses, so a premium colour picked before "free only" was
+  // ticked scatters as its free stand-in rather than as a colour the export cannot place.
+  const mix = useMemo(() => mixPixels.map((pixel) => remap[pixel]), [mixPixels, remap])
   const sprite = sprites.find((item) => item.id === spriteId) ?? null
 
   // The picked sprite is the one file the library decodes on demand rather than on view; until it
@@ -204,6 +220,9 @@ export function App() {
       return
     }
 
+    // An empty mix would otherwise cost an undo step for a stroke that changed nothing.
+    if (tool === 'scatter' && mix.length === 0) return
+
     const starting = !strokeRef.current
     // Fill and stamp act once per press; the others follow the drag, off the canvas included.
     if (!starting && (tool === 'fill' || tool === 'stamp')) return
@@ -214,6 +233,7 @@ export function App() {
       strokeRef.current = true
       lastRef.current = null
       startRef.current = point
+      seedRef.current = (Math.random() * 0x7fffffff) | 0
       if (tool === 'move') {
         moveRef.current = {
           source: Uint8Array.from(layer.pixels),
@@ -246,6 +266,9 @@ export function App() {
         stampOrigin(point.x, stampBuffer.width),
         stampOrigin(point.y, stampBuffer.height),
       )
+    } else if (tool === 'scatter') {
+      const from = lastRef.current ?? point
+      paintScatterLine(target, from.x, from.y, point.x, point.y, brushSize, mix, seedRef.current)
     } else if (tool === 'outline') {
       const from = lastRef.current ?? point
       paintOutlineLine(target, from.x, from.y, point.x, point.y, brushSize, colorPixel, edgePixel)
@@ -510,10 +533,12 @@ export function App() {
             <PalettePanel
               main={colorPixel}
               edge={tool === 'outline' ? edgePixel : null}
+              mix={tool === 'scatter' ? mixPixels : null}
               slot={slot}
               colorCount={colorCount}
               onSlot={setSlot}
               onChange={setSlotColor}
+              onToggleMix={toggleMix}
             />
           </PanelSection>
 
