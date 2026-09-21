@@ -1,4 +1,4 @@
-export const DEFAULT_PANEL_WIDTH = 340
+export const DEFAULT_PANEL_WIDTH = 680
 
 // Below this the palette swatches wrap into a column and the canvas size row stops fitting.
 const MIN_PANEL_WIDTH = 280

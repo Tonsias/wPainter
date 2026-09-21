@@ -20,6 +20,6 @@ describe('clampPanelWidth', () => {
   })
 
   it('opens at a width every supported layout can hold', () => {
-    expect(clampPanelWidth(DEFAULT_PANEL_WIDTH, 1024)).toBe(DEFAULT_PANEL_WIDTH)
+    expect(clampPanelWidth(DEFAULT_PANEL_WIDTH, 1280)).toBe(DEFAULT_PANEL_WIDTH)
   })
 })

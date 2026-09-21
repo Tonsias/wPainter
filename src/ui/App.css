@@ -117,7 +117,7 @@ button:disabled {
   flex: 1;
   /* The panel's width is dragged, so it arrives as an inline custom property; the middle track is
      the separator, which is why the gap is halved and paid on both sides of it instead. */
-  grid-template-columns: minmax(0, 1fr) var(--app-resizer-width, 14px) var(--app-panel-width, 340px);
+  grid-template-columns: minmax(0, 1fr) var(--app-resizer-width, 14px) var(--app-panel-width, 680px);
   gap: var(--space-2);
   min-height: 0;
   /* A flex item refuses by default to shrink under the width of its own content, and a grid whose
