@@ -10,8 +10,29 @@ type Props = {
   onBrushSize: (size: BrushSize) => void
   onHistory: (direction: 'undo' | 'redo') => void
   onImport: (file: File) => void
+  onImportLayer: (file: File) => void
   onExport: () => void
   onExpertExport: (mask: File) => void
+}
+
+type FileButtonProps = { label: string; title: string; onPick: (file: File) => void }
+
+// A label styled as a button, because a file input cannot be triggered from one without a ref.
+function FileButton({ label, title, onPick }: FileButtonProps) {
+  return (
+    <label className="btn toolbar__file" title={title}>
+      {label}
+      <input
+        type="file"
+        accept="image/png"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) onPick(file)
+          event.target.value = ''
+        }}
+      />
+    </label>
+  )
 }
 
 export function Toolbar({
@@ -23,6 +44,7 @@ export function Toolbar({
   onBrushSize,
   onHistory,
   onImport,
+  onImportLayer,
   onExport,
   onExpertExport,
 }: Props) {
@@ -67,33 +89,20 @@ export function Toolbar({
           Redo
         </button>
       </div>
-      <label className="btn toolbar__file">
-        Import PNG
-        <input
-          type="file"
-          accept="image/png"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            if (file) onImport(file)
-            event.target.value = ''
-          }}
-        />
-      </label>
+      <FileButton label="Import PNG" title="Replace the document" onPick={onImport} />
+      <FileButton
+        label="Import as Layer"
+        title="Add this image as a layer, keeping the canvas size"
+        onPick={onImportLayer}
+      />
       <button type="button" className="btn btn--primary" onClick={onExport}>
         Export PNG
       </button>
-      <label className="btn toolbar__file" title="Export with a second PNG cut out of it">
-        Expert Export PNG
-        <input
-          type="file"
-          accept="image/png"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            if (file) onExpertExport(file)
-            event.target.value = ''
-          }}
-        />
-      </label>
+      <FileButton
+        label="Expert Export PNG"
+        title="Export with a second PNG cut out of it"
+        onPick={onExpertExport}
+      />
     </div>
   )
 }

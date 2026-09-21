@@ -319,10 +319,12 @@ export function App() {
     }
   }
 
+  const layerName = (file: File) => file.name.replace(/\.png$/i, '')
+
   const importPng = async (file: File) => {
     try {
       const image = await decodeImageFile(file)
-      const layer = createLayer(file.name.replace(/\.png$/i, ''), image.width, image.height)
+      const layer = createLayer(layerName(file), image.width, image.height)
       layer.pixels.set(quantizeRgba(image.rgba, colorCount))
       replaceDocument({
         width: image.width,
@@ -334,6 +336,22 @@ export function App() {
     } catch {
       // A file the browser cannot decode is the common case here, and without this the import
       // fails as an unhandled rejection: the app just sits there looking broken.
+      setError(`${file.name} could not be read as an image.`)
+    }
+  }
+
+  // The canvas is left exactly as it is, so an image of another size is stamped from the
+  // top-left and clipped there — the same corner a resize anchors to.
+  const importPngLayer = async (file: File) => {
+    try {
+      const image = await decodeImageFile(file)
+      const layer = createLayer(layerName(file), doc.width, doc.height)
+      const pixels = quantizeRgba(image.rgba, colorCount)
+      const target = { pixels: layer.pixels, width: doc.width, height: doc.height }
+      stamp(target, { pixels, width: image.width, height: image.height }, 0, 0)
+      structural({ ...doc, layers: [...doc.layers, layer], activeLayerId: layer.id })
+      setError(null)
+    } catch {
       setError(`${file.name} could not be read as an image.`)
     }
   }
@@ -384,6 +402,7 @@ export function App() {
         onBrushSize={setBrushSize}
         onHistory={stepHistory}
         onImport={(file) => void importPng(file)}
+        onImportLayer={(file) => void importPngLayer(file)}
         onExport={() =>
           void exportPng(doc, 'wplace-template.png').catch(() =>
             setError('The export could not be written.'),

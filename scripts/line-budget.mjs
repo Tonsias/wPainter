@@ -20,10 +20,14 @@ const CEILINGS = new Map([
   // draggable panel then added a separator the shell has to carry: its own track in the grid,
   // pointer and keyboard handling, and a re-clamp when the window changes size.
   // The side panel then grew sections that fold, so the sprite tree can own the panel's height
-  // and be the only thing in it that scrolls.
+  // and be the only thing in it that scrolls. Importing a PNG then split into two buttons —
+  // replace the document, or add it as a layer over the canvas as it stands.
   [
     'ui',
-    { ceiling: 1620, reason: 'canvas host, a toolbar per tool, a resizable panel, folding sections' },
+    {
+      ceiling: 1650,
+      reason: 'canvas host, a toolbar per tool, a resizable panel, folding sections, two imports',
+    },
   ],
 ]);
 
