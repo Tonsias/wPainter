@@ -1,9 +1,10 @@
 /* The rail down the left: everything that used to sit in a top bar, stacked so the canvas gets
-   the full height of the window instead of paying for a header. */
+   the full height of the window instead of paying for a header. Icon-only, which is what lets it
+   be three buttons wide — the label of every control lives in its tooltip and its aria-label. */
 .toolbar {
   display: flex;
   flex: none;
-  width: 168px;
+  width: 124px;
   flex-direction: column;
   gap: var(--space-3);
   align-items: stretch;
@@ -14,8 +15,27 @@
   border-right: 1px solid var(--color-divider);
 }
 
-.segment--stack {
-  flex-direction: column;
+.toolbar__mark {
+  display: flex;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+.toolbar__mark .icon {
+  width: 30px;
+  height: 30px;
+}
+
+/* Nine tools square off exactly three to a row, which is the width the whole rail is cut to. */
+.segment--grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.segment--grid .segment__option {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
 }
 
 .toolbar__spacer {
@@ -23,21 +43,19 @@
   min-height: var(--space-2);
 }
 
-.toolbar__pair {
-  display: flex;
+.toolbar__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
 
-.toolbar__pair .btn {
-  flex: 1;
+/* An icon has no text to sit beside, so the pill is centred on it rather than padded for a word. */
+.toolbar .btn {
+  justify-content: center;
   padding: 0;
 }
 
 /* A label styled as a button, because a file input cannot be triggered from one without a ref. */
-.toolbar__file {
-  justify-content: center;
-}
-
 .toolbar__file input {
   display: none;
 }

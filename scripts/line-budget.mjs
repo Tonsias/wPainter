@@ -21,12 +21,14 @@ const CEILINGS = new Map([
   // pointer and keyboard handling, and a re-clamp when the window changes size.
   // The side panel then grew sections that fold, so the sprite tree can own the panel's height
   // and be the only thing in it that scrolls. Importing a PNG then split into two buttons —
-  // replace the document, or add it as a layer over the canvas as it stands.
+  // replace the document, or add it as a layer over the canvas as it stands. The rail then lost
+  // its words: every control in it is an icon now, and the drawings are path data kept here
+  // rather than an icon package pulled in for them.
   [
     'ui',
     {
-      ceiling: 1650,
-      reason: 'canvas host, a toolbar per tool, a resizable panel, folding sections, two imports',
+      ceiling: 1780,
+      reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set',
     },
   ],
 ]);
@@ -41,8 +43,9 @@ const DEFAULT_CEILING = 1200;
 // for the scatter brush: a palette slot that holds a set rather than one colour, plus the tests
 // that pin its stroke down as reproducible. Raised once more for layers that can be renamed in
 // place and dragged into order, whose reordering rule is a tested pure function rather than the
-// swap the buttons used to do inline.
-const TOTAL_CEILING = 4260;
+// swap the buttons used to do inline. Raised once more for the toolbar's icon set, which is
+// drawing data rather than logic — the alternative was a dependency.
+const TOTAL_CEILING = 4380;
 
 function listSourceFiles(dir) {
   const out = [];

@@ -36,5 +36,11 @@ export const TOOL_KEYS: Record<string, Tool> = {
   v: 'move',
 }
 
+// The same shortcuts read the other way round, for the tooltip that is now a tool button's only
+// label: with the text gone from the rail, the key is the one place the binding is still visible.
+export const TOOL_KEY = Object.fromEntries(
+  Object.entries(TOOL_KEYS).map(([key, tool]) => [tool, key]),
+) as Record<Tool, string>
+
 export const BRUSH_SIZES = [1, 2, 3, 4, 8] as const
 export type BrushSize = (typeof BRUSH_SIZES)[number]

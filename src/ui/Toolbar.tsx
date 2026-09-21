@@ -1,5 +1,6 @@
 import './Toolbar.css'
-import { BRUSH_SIZES, TOOLS, TOOL_LABELS, type BrushSize, type Tool } from './tools.ts'
+import { Icon, BrushDot, type IconName } from './icons.tsx'
+import { BRUSH_SIZES, TOOLS, TOOL_KEY, TOOL_LABELS, type BrushSize, type Tool } from './tools.ts'
 
 type Props = {
   tool: Tool
@@ -15,13 +16,14 @@ type Props = {
   onExpertExport: (mask: File) => void
 }
 
-type FileButtonProps = { label: string; title: string; onPick: (file: File) => void }
+type FileButtonProps = { icon: IconName; label: string; onPick: (file: File) => void }
 
 // A label styled as a button, because a file input cannot be triggered from one without a ref.
-function FileButton({ label, title, onPick }: FileButtonProps) {
+// The label is the tooltip and the accessible name: nothing in this rail is spelled out on screen.
+function FileButton({ icon, label, onPick }: FileButtonProps) {
   return (
-    <label className="btn toolbar__file" title={title}>
-      {label}
+    <label className="btn toolbar__file" title={label} aria-label={label}>
+      <Icon name={icon} />
       <input
         type="file"
         accept="image/png"
@@ -50,59 +52,90 @@ export function Toolbar({
 }: Props) {
   return (
     <div className="toolbar">
-      <span className="app__mark">wPainter</span>
+      <span className="toolbar__mark" title="wPainter" aria-label="wPainter">
+        <Icon name="mark" />
+      </span>
 
-      <div className="segment segment--stack">
-        {TOOLS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={`segment__option${option === tool ? ' segment__option--active' : ''}`}
-            onClick={() => onTool(option)}
-          >
-            {TOOL_LABELS[option]}
-          </button>
-        ))}
+      <div className="segment segment--grid">
+        {TOOLS.map((option) => {
+          const label = `${TOOL_LABELS[option]} (${TOOL_KEY[option].toUpperCase()})`
+          return (
+            <button
+              key={option}
+              type="button"
+              title={label}
+              aria-label={label}
+              className={`segment__option${option === tool ? ' segment__option--active' : ''}`}
+              onClick={() => onTool(option)}
+            >
+              <Icon name={option} />
+            </button>
+          )
+        })}
       </div>
 
-      <div className="segment">
+      <div className="segment segment--grid">
         {BRUSH_SIZES.map((option) => (
           <button
             key={option}
             type="button"
             title={`Brush ${option} px`}
+            aria-label={`Brush ${option} px`}
             className={`segment__option${option === brushSize ? ' segment__option--active' : ''}`}
             onClick={() => onBrushSize(option)}
           >
-            {option}
+            <BrushDot size={option} />
           </button>
         ))}
       </div>
 
       <span className="toolbar__spacer" />
 
-      <div className="toolbar__pair">
-        <button type="button" className="btn" disabled={!canUndo} onClick={() => onHistory('undo')}>
-          Undo
+      <div className="toolbar__grid">
+        <button
+          type="button"
+          className="btn"
+          title="Undo"
+          aria-label="Undo"
+          disabled={!canUndo}
+          onClick={() => onHistory('undo')}
+        >
+          <Icon name="undo" />
         </button>
-        <button type="button" className="btn" disabled={!canRedo} onClick={() => onHistory('redo')}>
-          Redo
+        <button
+          type="button"
+          className="btn"
+          title="Redo"
+          aria-label="Redo"
+          disabled={!canRedo}
+          onClick={() => onHistory('redo')}
+        >
+          <Icon name="redo" />
         </button>
       </div>
-      <FileButton label="Import PNG" title="Replace the document" onPick={onImport} />
-      <FileButton
-        label="Import as Layer"
-        title="Add this image as a layer, keeping the canvas size"
-        onPick={onImportLayer}
-      />
-      <button type="button" className="btn btn--primary" onClick={onExport}>
-        Export PNG
-      </button>
-      <FileButton
-        label="Expert Export PNG"
-        title="Export with a second PNG cut out of it"
-        onPick={onExpertExport}
-      />
+
+      <div className="toolbar__grid">
+        <FileButton icon="import" label="Import PNG — replace the document" onPick={onImport} />
+        <FileButton
+          icon="importLayer"
+          label="Import PNG as a layer, keeping the canvas size"
+          onPick={onImportLayer}
+        />
+        <button
+          type="button"
+          className="btn btn--primary"
+          title="Export PNG"
+          aria-label="Export PNG"
+          onClick={onExport}
+        >
+          <Icon name="export" />
+        </button>
+        <FileButton
+          icon="cutout"
+          label="Expert export — a second PNG cut out of it"
+          onPick={onExpertExport}
+        />
+      </div>
     </div>
   )
 }

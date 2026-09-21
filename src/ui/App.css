@@ -108,8 +108,11 @@ button:disabled {
   background: var(--color-bg);
 }
 
-.app__mark {
-  font: 26px var(--font-heading);
+/* Sized by whatever carries it; `flex: none` so a pill never squeezes one out of square. */
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
 }
 
 .app__main {
