@@ -35,8 +35,10 @@ const DEFAULT_CEILING = 1200;
 // only the parts: src/ as a whole stays small enough to read in one context window. Raised for
 // the stamp's eight orientations, whose exhaustive tests are most of what it bought, and again
 // for the scatter brush: a palette slot that holds a set rather than one colour, plus the tests
-// that pin its stroke down as reproducible.
-const TOTAL_CEILING = 4150;
+// that pin its stroke down as reproducible. Raised once more for layers that can be renamed in
+// place and dragged into order, whose reordering rule is a tested pure function rather than the
+// swap the buttons used to do inline.
+const TOTAL_CEILING = 4260;
 
 function listSourceFiles(dir) {
   const out = [];

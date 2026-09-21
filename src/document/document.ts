@@ -58,3 +58,23 @@ export function resizeDocument(doc: PaintDocument, width: number, height: number
     }),
   }
 }
+
+// Move rather than swap: a drop has to land the layer *at* the target's index, which for a
+// neighbour is what a swap does anyway and for a distant row is not. Indices are into the array,
+// so the panel's reversed order needs no arithmetic — "put A where B is" reads the same either way.
+export function moveLayer(doc: PaintDocument, from: number, to: number): PaintDocument {
+  if (from === to || to < 0 || to >= doc.layers.length) return doc
+  const layers = [...doc.layers]
+  const [moved] = layers.splice(from, 1)
+  layers.splice(to, 0, moved)
+  return { ...doc, layers }
+}
+
+export function renameLayer(doc: PaintDocument, id: string, name: string): PaintDocument {
+  const trimmed = name.trim()
+  if (!trimmed) return doc
+  return {
+    ...doc,
+    layers: doc.layers.map((layer) => (layer.id === id ? { ...layer, name: trimmed } : layer)),
+  }
+}

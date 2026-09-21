@@ -16,9 +16,18 @@
   border-radius: 10px;
 }
 
+.layers__row[draggable='true'] {
+  cursor: grab;
+}
+
 .layers__row--active {
   border-color: var(--color-accent);
   background: var(--color-neutral-100);
+}
+
+.layers__row--drop {
+  border-style: dashed;
+  border-color: var(--color-accent-600);
 }
 
 .layers__toggle,
@@ -46,6 +55,18 @@
   color: var(--color-text);
   background: transparent;
   border: 0;
+}
+
+.layers__rename {
+  min-width: 0;
+  height: 26px;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: 12px;
+  color: var(--color-text);
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
 }
 
 .layers__add {
