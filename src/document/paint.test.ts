@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   UNTURNED,
+  expandMix,
   flipOrientation,
   floodFill,
   paintDot,
@@ -89,6 +90,25 @@ describe('scatter', () => {
     const target = buffer(4, 4)
     paintScatterLine(target, 0, 0, 3, 3, 2, [], 5)
     expect([...target.pixels].every((value) => value === 0)).toBe(true)
+  })
+
+  it('gives a colour as many draw slots as its weight', () => {
+    expect([
+      ...expandMix([
+        { pixel: 2, weight: 3 },
+        { pixel: 4, weight: 1 },
+      ]),
+    ]).toEqual([2, 2, 2, 4])
+  })
+
+  it('draws a heavier colour more often', () => {
+    const draw = expandMix([
+      { pixel: 2, weight: 5 },
+      { pixel: 4, weight: 1 },
+    ])
+    let heavy = 0
+    for (let x = 0; x < 600; x += 1) if (scatterPixel(3, x, 0, draw) === 2) heavy += 1
+    expect(heavy).toBeGreaterThan(400)
   })
 })
 

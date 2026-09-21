@@ -1,5 +1,5 @@
 import './PalettePanel.css'
-import { MAX_OUTLINE_COLORS } from '../document/paint.ts'
+import { MAX_MIX_WEIGHT, MAX_OUTLINE_COLORS, type MixColor } from '../document/paint.ts'
 import { FREE_COLOR_COUNT, WPLACE_COLORS, type PaletteColor } from './wplace.ts'
 
 const COLOR_SLOTS = ['main', 'edge', 'mix'] as const
@@ -13,12 +13,13 @@ type Props = {
   // writing into a slot the user cannot see. Both are sets, and the edge's order is its ring
   // order: first picked is the ring against the fill.
   edges: readonly number[] | null
-  mix: readonly number[] | null
+  mix: readonly MixColor[] | null
   slot: ColorSlot
   colorCount: number
   onSlot: (slot: ColorSlot) => void
   onChange: (pixel: number) => void
   onToggle: (pixel: number) => void
+  onWeight: (pixel: number, weight: number) => void
 }
 
 type SwatchProps = {
@@ -52,22 +53,31 @@ function Swatches({ colors, firstPixel, selected, disabled, onChange }: SwatchPr
   )
 }
 
-// Hard stops rather than a blend: a gradient that interpolates would show colours the set does
-// not contain, and these dots' whole job is to say which ones it does.
-const stops = (pixels: readonly number[]) =>
-  pixels.map(
-    (pixel, index) =>
-      `${WPLACE_COLORS[pixel - 1].hex} ${(index / pixels.length) * 100}% ${
-        ((index + 1) / pixels.length) * 100
-      }%`,
-  )
+const weight = (pixels: readonly number[]): readonly MixColor[] =>
+  pixels.map((pixel) => ({ pixel, weight: 1 }))
 
-const mixGradient = (mix: readonly number[]) =>
+const share = (mix: readonly MixColor[], of: number) =>
+  Math.round((of / mix.reduce((sum, item) => sum + item.weight, 0)) * 100)
+
+// Hard stops rather than a blend: a gradient that interpolates would show colours the set does
+// not contain, and these dots' whole job is to say which ones it does. Each stop is as wide as
+// its weight, so the mix dot reads as the ratio the brush draws at.
+const stops = (slices: readonly MixColor[]) => {
+  const total = slices.reduce((sum, item) => sum + item.weight, 0)
+  let filled = 0
+  return slices.map((item) => {
+    const from = (filled / total) * 100
+    filled += item.weight
+    return `${WPLACE_COLORS[item.pixel - 1].hex} ${from}% ${(filled / total) * 100}%`
+  })
+}
+
+const mixGradient = (mix: readonly MixColor[]) =>
   mix.length === 0 ? 'transparent' : `linear-gradient(135deg, ${stops(mix).join(', ')})`
 
 // Concentric, because the rings are: the dot is a miniature of the nib the brush lays down.
 const edgeGradient = (main: number, edges: readonly number[]) =>
-  `radial-gradient(circle, ${stops([main, ...edges]).join(', ')})`
+  `radial-gradient(circle, ${stops(weight([main, ...edges])).join(', ')})`
 
 export function PalettePanel({
   main,
@@ -78,23 +88,25 @@ export function PalettePanel({
   onSlot,
   onChange,
   onToggle,
+  onWeight,
 }: Props) {
   const edged = edges ?? []
   const mixed = mix ?? []
   const edging = slot === 'edge' && edges !== null
   const mixing = slot === 'mix' && mix !== null
-  const set = edging ? edged : mixing ? mixed : null
   const slots = COLOR_SLOTS.filter((option) =>
     option === 'edge' ? edges !== null : option === 'mix' ? mix !== null : true,
   )
-  const selected = set
-    ? (pixel: number) => set.includes(pixel)
-    : (pixel: number) => pixel === main
+  const selected = edging
+    ? (pixel: number) => edged.includes(pixel)
+    : mixing
+      ? (pixel: number) => mixed.some((item) => item.pixel === pixel)
+      : (pixel: number) => pixel === main
   const full = edging && edged.length >= MAX_OUTLINE_COLORS
   const swatches = {
     selected,
     disabled: (pixel: number) => pixel > colorCount || (full && !selected(pixel)),
-    onChange: set ? onToggle : onChange,
+    onChange: edging || mixing ? onToggle : onChange,
   }
   return (
     <div className="palette">
@@ -136,6 +148,27 @@ export function PalettePanel({
             ? 'Pick the colours the scatter brush draws from.'
             : `${mixed.length} colour${mixed.length === 1 ? '' : 's'} in the mix · click to remove`}
         </p>
+      )}
+      {mixing && mixed.length > 0 && (
+        <ul className="palette__mix">
+          {mixed.map((item) => (
+            <li key={item.pixel} className="palette__ratio">
+              <span
+                className="palette__dot"
+                style={{ background: WPLACE_COLORS[item.pixel - 1].hex }}
+              />
+              <input
+                type="range"
+                min={1}
+                max={MAX_MIX_WEIGHT}
+                value={item.weight}
+                aria-label={`${WPLACE_COLORS[item.pixel - 1].name} share of the mix`}
+                onChange={(event) => onWeight(item.pixel, Number(event.target.value))}
+              />
+              <span className="palette__share">{share(mixed, item.weight)}%</span>
+            </li>
+          ))}
+        </ul>
       )}
       <p className="palette__group">Free · {FREE_COLOR_COUNT}</p>
       <Swatches colors={WPLACE_COLORS.slice(0, FREE_COLOR_COUNT)} firstPixel={1} {...swatches} />

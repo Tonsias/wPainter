@@ -14,8 +14,10 @@ import {
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
 import {
+  MAX_MIX_WEIGHT,
   MAX_OUTLINE_COLORS,
   UNTURNED,
+  expandMix,
   floodFill,
   orientPixelBuffer,
   paintLine,
@@ -24,6 +26,7 @@ import {
   scalePixelBuffer,
   stamp,
   stampOrigin,
+  type MixColor,
   type Orientation,
   type PixelBuffer,
 } from '../document/paint.ts'
@@ -84,8 +87,13 @@ export function App() {
   const [edgePixels, setEdgePixels] = useState<readonly number[]>([5])
   const [slot, setSlot] = useState<ColorSlot>('main')
   // The scatter brush's palette. Black, gray and white so the tool draws something recognisable
-  // before the user has touched the mix; an emptied mix simply paints nothing.
-  const [mixPixels, setMixPixels] = useState<readonly number[]>([1, 3, 5])
+  // before the user has touched the mix; an emptied mix simply paints nothing. Equal weights are
+  // the even scatter the brush had before the ratio was adjustable.
+  const [mixColors, setMixColors] = useState<readonly MixColor[]>([
+    { pixel: 1, weight: 1 },
+    { pixel: 3, weight: 1 },
+    { pixel: 5, weight: 1 },
+  ])
   const [brushSize, setBrushSize] = useState<BrushSize>(1)
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
@@ -130,21 +138,40 @@ export function App() {
   // A colour already in the set leaves it; a new one joins at the end, which for the outline is
   // the ring furthest out. The cap is what stops the nib growing past what the brush can draw.
   const toggleSlotColor = (pixel: number) => {
-    const toggle = (cap: number) => (current: readonly number[]) =>
-      current.includes(pixel)
-        ? current.filter((item) => item !== pixel)
-        : current.length < cap
-          ? [...current, pixel]
-          : current
-    if (slot === 'edge') setEdgePixels(toggle(MAX_OUTLINE_COLORS))
-    else setMixPixels(toggle(WPLACE_COLORS.length))
+    if (slot === 'edge') {
+      setEdgePixels((current) =>
+        current.includes(pixel)
+          ? current.filter((item) => item !== pixel)
+          : current.length < MAX_OUTLINE_COLORS
+            ? [...current, pixel]
+            : current,
+      )
+      return
+    }
+    setMixColors((current) =>
+      current.some((item) => item.pixel === pixel)
+        ? current.filter((item) => item.pixel !== pixel)
+        : [...current, { pixel, weight: 1 }],
+    )
+  }
+
+  // Clamped here rather than in the control, so no path can put a share in the state that the
+  // scatter would not draw.
+  const setMixWeight = (pixel: number, weight: number) => {
+    const bounded = Math.min(MAX_MIX_WEIGHT, Math.max(1, weight))
+    setMixColors((current) =>
+      current.map((item) => (item.pixel === pixel ? { pixel, weight: bounded } : item)),
+    )
   }
 
   const colorCount = freeOnly ? FREE_COLOR_COUNT : WPLACE_COLORS.length
   const remap = useMemo(() => remapTable(colorCount), [colorCount])
   // Through the same table the stamp uses, so a premium colour picked before "free only" was
   // ticked scatters as its free stand-in rather than as a colour the export cannot place.
-  const mix = useMemo(() => mixPixels.map((pixel) => remap[pixel]), [mixPixels, remap])
+  const mix = useMemo(
+    () => expandMix(mixColors).map((pixel) => remap[pixel]),
+    [mixColors, remap],
+  )
   const sprite = sprites.find((item) => item.id === spriteId) ?? null
 
   // The picked sprite is the one file the library decodes on demand rather than on view; until it
@@ -559,12 +586,13 @@ export function App() {
             <PalettePanel
               main={colorPixel}
               edges={tool === 'outline' ? edgePixels : null}
-              mix={tool === 'scatter' ? mixPixels : null}
+              mix={tool === 'scatter' ? mixColors : null}
               slot={slot}
               colorCount={colorCount}
               onSlot={setSlot}
               onChange={setColorPixel}
               onToggle={toggleSlotColor}
+              onWeight={setMixWeight}
             />
           </PanelSection>
 

@@ -23,11 +23,12 @@ const CEILINGS = new Map([
   // and be the only thing in it that scrolls. Importing a PNG then split into two buttons —
   // replace the document, or add it as a layer over the canvas as it stands. The rail then lost
   // its words: every control in it is an icon now, and the drawings are path data kept here
-  // rather than an icon package pulled in for them.
+  // rather than an icon package pulled in for them. The scatter mix then became a weighted set,
+  // so the shell carries the weights and the handler that moves them as well as the colours.
   [
     'ui',
     {
-      ceiling: 1780,
+      ceiling: 1820,
       reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set',
     },
   ],
@@ -48,8 +49,10 @@ const DEFAULT_CEILING = 1200;
 // that pin its stroke down as reproducible. Raised once more for layers that can be renamed in
 // place and dragged into order, whose reordering rule is a tested pure function rather than the
 // swap the buttons used to do inline. Raised once more for the toolbar's icon set, which is
-// drawing data rather than logic — the alternative was a dependency.
-const TOTAL_CEILING = 4380;
+// drawing data rather than logic — the alternative was a dependency. Raised once more for the
+// scatter mix's per-colour ratio: a weight beside every picked colour, the slider that sets it,
+// and the draw the weights expand into.
+const TOTAL_CEILING = 4560;
 
 function listSourceFiles(dir) {
   const out = [];

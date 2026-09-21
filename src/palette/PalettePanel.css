@@ -65,3 +65,38 @@
   font-size: 12px;
   color: var(--color-neutral-700);
 }
+
+.palette__mix {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.palette__ratio {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.palette__ratio .palette__dot {
+  margin-right: 0;
+}
+
+.palette__ratio input {
+  width: 0;
+  flex: 1;
+  min-width: 60px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+
+.palette__share {
+  min-width: 30px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-neutral-700);
+}

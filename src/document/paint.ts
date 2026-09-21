@@ -112,6 +112,24 @@ export function paintDot(
   })
 }
 
+export const MAX_MIX_WEIGHT = 9
+
+// A mix colour's weight is how many of the draw's slots it holds. `scatterPixel` draws uniformly,
+// so repeating a pixel `weight` times is the entire implementation of the ratio — the alternative,
+// a cumulative-weight search per pixel, would cost more per pixel to say the same thing.
+export type MixColor = {
+  readonly pixel: number
+  readonly weight: number
+}
+
+export function expandMix(mix: readonly MixColor[]): readonly number[] {
+  const draw: number[] = []
+  for (const { pixel, weight } of mix) {
+    for (let slot = 0; slot < weight; slot += 1) draw.push(pixel)
+  }
+  return draw
+}
+
 // Which colour of the mix a pixel gets, as a hash of its own coordinates and the stroke's seed
 // rather than a draw from a generator: the nibs walked along a line overlap, and re-rolling a
 // pixel every time one covers it makes the stroke boil under the cursor instead of settling.

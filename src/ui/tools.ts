@@ -42,5 +42,5 @@ export const TOOL_KEY = Object.fromEntries(
   Object.entries(TOOL_KEYS).map(([key, tool]) => [tool, key]),
 ) as Record<Tool, string>
 
-export const BRUSH_SIZES = [1, 2, 3, 4, 8] as const
+export const BRUSH_SIZES = [1, 2, 3, 4, 6, 8] as const
 export type BrushSize = (typeof BRUSH_SIZES)[number]
