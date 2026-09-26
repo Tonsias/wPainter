@@ -49,7 +49,7 @@ import {
   clampPanelWidth,
 } from './panel.ts'
 import { Toolbar } from './Toolbar.tsx'
-import { TOOL_KEYS, type Tool } from './tools.ts'
+import { TOOL_KEYS, type EraserMode, type Tool } from './tools.ts'
 import { ZOOMS, fitZoom, type Zoom } from './zoom.ts'
 
 const DEFAULT_SIZE = 128
@@ -100,6 +100,7 @@ export function App() {
   ])
   const [brushSize, setBrushSize] = useState(1)
   const [brushShape, setBrushShape] = useState<BrushShape>('square')
+  const [eraserMode, setEraserMode] = useState<EraserMode>('brush')
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
   const [showGrid, setShowGrid] = useState(true)
@@ -273,9 +274,10 @@ export function App() {
     if (tool === 'scatter' && mix.length === 0) return
 
     const starting = !strokeRef.current
-    // Fill and stamp act once per press; the others follow the drag, off the canvas included.
-    if (!starting && (tool === 'fill' || tool === 'stamp')) return
-    if (!inside && (tool === 'fill' || tool === 'stamp')) return
+    const floods = tool === 'fill' || (tool === 'eraser' && eraserMode === 'fill')
+    // Fills and stamp act once per press; the others follow the drag, off the canvas included.
+    if (!starting && (floods || tool === 'stamp')) return
+    if (!inside && (floods || tool === 'stamp')) return
 
     if (starting) {
       snapshot()
@@ -306,8 +308,8 @@ export function App() {
         drag.delta.x,
         drag.delta.y,
       )
-    } else if (tool === 'fill') {
-      floodFill(target, point.x, point.y, colorPixel)
+    } else if (floods) {
+      floodFill(target, point.x, point.y, tool === 'eraser' ? EMPTY_PIXEL : colorPixel)
     } else if (tool === 'stamp') {
       if (!stampBuffer) return
       stamp(
@@ -447,11 +449,13 @@ export function App() {
         tool={tool}
         brushSize={brushSize}
         brushShape={brushShape}
+        eraserMode={eraserMode}
         canUndo={history.past.length > 0}
         canRedo={history.future.length > 0}
         onTool={pickTool}
         onBrushSize={setBrushSize}
         onBrushShape={setBrushShape}
+        onEraserMode={setEraserMode}
         onHistory={stepHistory}
         onImport={(file) => void importPng(file)}
         onImportLayer={(file) => void importPngLayer(file)}

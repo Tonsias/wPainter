@@ -11,6 +11,11 @@ export const TOOLS = [
 ] as const
 export type Tool = (typeof TOOLS)[number]
 
+// The eraser either follows the brush or floods a connected region back to transparent, which is
+// the fill tool with the one value the palette has no swatch for.
+export const ERASER_MODES = ['brush', 'fill'] as const
+export type EraserMode = (typeof ERASER_MODES)[number]
+
 export const TOOL_LABELS: Record<Tool, string> = {
   brush: 'Brush',
   outline: 'Outline',

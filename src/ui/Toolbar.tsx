@@ -2,17 +2,27 @@ import './Toolbar.css'
 import { Icon, type IconName } from './icons.tsx'
 import { NumberField } from './NumberField.tsx'
 import { BRUSH_SHAPES, type BrushShape } from '../document/paint.ts'
-import { MAX_BRUSH_SIZE, TOOLS, TOOL_KEY, TOOL_LABELS, type Tool } from './tools.ts'
+import {
+  ERASER_MODES,
+  MAX_BRUSH_SIZE,
+  TOOLS,
+  TOOL_KEY,
+  TOOL_LABELS,
+  type EraserMode,
+  type Tool,
+} from './tools.ts'
 
 type Props = {
   tool: Tool
   brushSize: number
   brushShape: BrushShape
+  eraserMode: EraserMode
   canUndo: boolean
   canRedo: boolean
   onTool: (tool: Tool) => void
   onBrushSize: (size: number) => void
   onBrushShape: (shape: BrushShape) => void
+  onEraserMode: (mode: EraserMode) => void
   onHistory: (direction: 'undo' | 'redo') => void
   onImport: (file: File) => void
   onImportLayer: (file: File) => void
@@ -41,15 +51,44 @@ function FileButton({ icon, label, onPick }: FileButtonProps) {
   )
 }
 
+type PairProps<T extends string> = {
+  options: readonly T[]
+  value: T
+  label: (option: T) => string
+  icon: (option: T) => IconName
+  onPick: (option: T) => void
+}
+
+function Pair<T extends string>({ options, value, label, icon, onPick }: PairProps<T>) {
+  return (
+    <div className="segment segment--grid segment--pair">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          title={label(option)}
+          aria-label={label(option)}
+          className={`segment__option${option === value ? ' segment__option--active' : ''}`}
+          onClick={() => onPick(option)}
+        >
+          <Icon name={icon(option)} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function Toolbar({
   tool,
   brushSize,
   brushShape,
+  eraserMode,
   canUndo,
   canRedo,
   onTool,
   onBrushSize,
   onBrushShape,
+  onEraserMode,
   onHistory,
   onImport,
   onImportLayer,
@@ -89,23 +128,23 @@ export function Toolbar({
         onChange={onBrushSize}
       />
 
-      <div className="segment segment--grid segment--pair">
-        {BRUSH_SHAPES.map((option) => {
-          const label = option === 'square' ? 'Square brush' : 'Round brush'
-          return (
-            <button
-              key={option}
-              type="button"
-              title={label}
-              aria-label={label}
-              className={`segment__option${option === brushShape ? ' segment__option--active' : ''}`}
-              onClick={() => onBrushShape(option)}
-            >
-              <Icon name={option} />
-            </button>
-          )
-        })}
-      </div>
+      <Pair
+        options={BRUSH_SHAPES}
+        value={brushShape}
+        label={(option) => (option === 'square' ? 'Square brush' : 'Round brush')}
+        icon={(option) => option}
+        onPick={onBrushShape}
+      />
+
+      {tool === 'eraser' && (
+        <Pair
+          options={ERASER_MODES}
+          value={eraserMode}
+          label={(option) => (option === 'brush' ? 'Erase with the brush' : 'Erase a connected area')}
+          icon={(option) => (option === 'brush' ? 'eraser' : 'fill')}
+          onPick={onEraserMode}
+        />
+      )}
 
       <span className="toolbar__spacer" />
 

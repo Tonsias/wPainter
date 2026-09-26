@@ -27,11 +27,11 @@ const CEILINGS = new Map([
   // so the shell carries the weights and the handler that moves them as well as the colours.
   // Brush size and stamp scale then became typed numbers, through one field that keeps the text
   // apart from the committed value and a tested parser behind it. The brush then got a shape
-  // toggle under the size, with an icon per shape.
+  // toggle under the size, with an icon per shape, and the eraser a brush/flood toggle beside it.
   [
     'ui',
     {
-      ceiling: 1920,
+      ceiling: 1960,
       reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set, a number field',
     },
   ],
@@ -64,8 +64,9 @@ const DEFAULT_CEILING = 1200;
 // and the draw the weights expand into. Raised once more for a ring around a stamped sprite,
 // which is the same edge colours the outline brush uses grown around the sprite's own shape.
 // Raised once more for typed brush size and stamp scale and a round brush beside the square one,
-// and for a picker that reads through the layer stack instead of the active layer alone.
-const TOTAL_CEILING = 4800;
+// and for a picker that reads through the layer stack instead of the active layer alone, and
+// for an eraser that can flood a region back to transparent.
+const TOTAL_CEILING = 4840;
 
 function listSourceFiles(dir) {
   const out = [];

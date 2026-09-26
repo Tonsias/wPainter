@@ -149,6 +149,13 @@ describe('scatter', () => {
 })
 
 describe('floodFill', () => {
+  it('floods a region back to transparent, which is what the eraser fill does', () => {
+    const target = buffer(3, 1, 4)
+    target.pixels[2] = 9
+    floodFill(target, 0, 0, 0)
+    expect([...target.pixels]).toEqual([0, 0, 9])
+  })
+
   it('fills only the connected region of the seed colour', () => {
     const target = buffer(3, 3)
     // A vertical wall down the middle column keeps the two sides apart.
