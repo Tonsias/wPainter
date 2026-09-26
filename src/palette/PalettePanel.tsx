@@ -56,8 +56,13 @@ function Swatches({ colors, firstPixel, selected, disabled, onChange }: SwatchPr
 const weight = (pixels: readonly number[]): readonly MixColor[] =>
   pixels.map((pixel) => ({ pixel, weight: 1 }))
 
-const share = (mix: readonly MixColor[], of: number) =>
-  Math.round((of / mix.reduce((sum, item) => sum + item.weight, 0)) * 100)
+// Clamped to 1–99 while other colours share the mix: every one of them still lands somewhere, so
+// rounding one to 0% or 100% would misreport it.
+const share = (mix: readonly MixColor[], of: number) => {
+  if (mix.length === 1) return 100
+  const percent = Math.round((of / mix.reduce((sum, item) => sum + item.weight, 0)) * 100)
+  return Math.min(99, Math.max(1, percent))
+}
 
 // Hard stops rather than a blend: a gradient that interpolates would show colours the set does
 // not contain, and these dots' whole job is to say which ones it does. Each stop is as wide as

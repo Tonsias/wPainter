@@ -7,6 +7,7 @@ import {
   paintDot,
   paintLine,
   paintOutlineLine,
+  MAX_MIX_WEIGHT,
   paintScatterLine,
   orientPixelBuffer,
   outlinePixelBuffer,
@@ -110,6 +111,17 @@ describe('scatter', () => {
     let heavy = 0
     for (let x = 0; x < 600; x += 1) if (scatterPixel(3, x, 0, draw) === 2) heavy += 1
     expect(heavy).toBeGreaterThan(400)
+  })
+
+  it('reaches a 1% / 99% split', () => {
+    const draw = expandMix([
+      { pixel: 2, weight: 1 },
+      { pixel: 4, weight: MAX_MIX_WEIGHT },
+    ])
+    let rare = 0
+    for (let x = 0; x < 10000; x += 1) if (scatterPixel(3, x, 0, draw) === 2) rare += 1
+    expect(rare).toBeGreaterThan(50)
+    expect(rare).toBeLessThan(200)
   })
 })
 

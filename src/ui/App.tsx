@@ -14,6 +14,7 @@ import {
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
 import {
+  DEFAULT_MIX_WEIGHT,
   MAX_MIX_WEIGHT,
   MAX_OUTLINE_COLORS,
   UNTURNED,
@@ -91,9 +92,9 @@ export function App() {
   // before the user has touched the mix; an emptied mix simply paints nothing. Equal weights are
   // the even scatter the brush had before the ratio was adjustable.
   const [mixColors, setMixColors] = useState<readonly MixColor[]>([
-    { pixel: 1, weight: 1 },
-    { pixel: 3, weight: 1 },
-    { pixel: 5, weight: 1 },
+    { pixel: 1, weight: DEFAULT_MIX_WEIGHT },
+    { pixel: 3, weight: DEFAULT_MIX_WEIGHT },
+    { pixel: 5, weight: DEFAULT_MIX_WEIGHT },
   ])
   const [brushSize, setBrushSize] = useState<BrushSize>(1)
   const [freeOnly, setFreeOnly] = useState(false)
@@ -153,7 +154,7 @@ export function App() {
     setMixColors((current) =>
       current.some((item) => item.pixel === pixel)
         ? current.filter((item) => item.pixel !== pixel)
-        : [...current, { pixel, weight: 1 }],
+        : [...current, { pixel, weight: DEFAULT_MIX_WEIGHT }],
     )
   }
 
