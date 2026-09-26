@@ -41,9 +41,10 @@ const CEILINGS = new Map([
   // The stamp then grew a ring of its own: a flood outwards from every painted pixel onto a
   // buffer grown to hold it, which is a different shape from the brush's nib-per-step rings.
   // The nib then became a size plus a shape, square or circle, and the tests that pin the circle.
+  // The picker then read through the layer stack, which is a document query and its test.
   [
     'document',
-    { ceiling: 1420, reason: 'the outline brush rings, the stamp ring, and the tests that pin them' },
+    { ceiling: 1440, reason: 'the outline brush rings, the stamp ring, and the tests that pin them' },
   ],
 ]);
 
