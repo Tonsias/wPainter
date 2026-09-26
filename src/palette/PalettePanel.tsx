@@ -56,13 +56,22 @@ function Swatches({ colors, firstPixel, selected, disabled, onChange }: SwatchPr
 const weight = (pixels: readonly number[]): readonly MixColor[] =>
   pixels.map((pixel) => ({ pixel, weight: 1 }))
 
-// Clamped to 1–99 while other colours share the mix: every one of them still lands somewhere, so
-// rounding one to 0% or 100% would misreport it.
+// Clamped to 0.1–99.9 while other colours share the mix: every one of them still lands somewhere,
+// so rounding one to 0% or 100% would misreport it. Near either end a tenth is what shows.
 const share = (mix: readonly MixColor[], of: number) => {
-  if (mix.length === 1) return 100
-  const percent = Math.round((of / mix.reduce((sum, item) => sum + item.weight, 0)) * 100)
-  return Math.min(99, Math.max(1, percent))
+  if (mix.length === 1) return '100'
+  const percent = (of / mix.reduce((sum, item) => sum + item.weight, 0)) * 100
+  const bounded = Math.min(99.9, Math.max(0.1, percent))
+  return bounded < 10 || bounded > 90 ? bounded.toFixed(1) : String(Math.round(bounded))
 }
+
+// The slider is logarithmic: on a linear 1–999 track everything under 1% would sit in the first
+// hundredth of its travel.
+const SLIDER_STEPS = 1000
+const sliderToWeight = (position: number) =>
+  Math.round(MAX_MIX_WEIGHT ** (position / SLIDER_STEPS))
+const weightToSlider = (weight: number) =>
+  Math.round((Math.log(weight) / Math.log(MAX_MIX_WEIGHT)) * SLIDER_STEPS)
 
 // Hard stops rather than a blend: a gradient that interpolates would show colours the set does
 // not contain, and these dots' whole job is to say which ones it does. Each stop is as wide as
@@ -164,11 +173,11 @@ export function PalettePanel({
               />
               <input
                 type="range"
-                min={1}
-                max={MAX_MIX_WEIGHT}
-                value={item.weight}
+                min={0}
+                max={SLIDER_STEPS}
+                value={weightToSlider(item.weight)}
                 aria-label={`${WPLACE_COLORS[item.pixel - 1].name} share of the mix`}
-                onChange={(event) => onWeight(item.pixel, Number(event.target.value))}
+                onChange={(event) => onWeight(item.pixel, sliderToWeight(Number(event.target.value)))}
               />
               <span className="palette__share">{share(mixed, item.weight)}%</span>
             </li>

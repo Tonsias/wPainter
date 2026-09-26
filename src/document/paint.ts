@@ -112,10 +112,10 @@ export function paintDot(
   })
 }
 
-// 99 against a partner's 1 is the 1% / 99% split the ratio has to reach. A new colour starts
+// 999 against a partner's 1 is the 0.1% / 99.9% split the ratio has to reach. A new colour starts
 // mid-scale so its share can be dragged both ways.
-export const MAX_MIX_WEIGHT = 99
-export const DEFAULT_MIX_WEIGHT = 50
+export const MAX_MIX_WEIGHT = 999
+export const DEFAULT_MIX_WEIGHT = 500
 
 // A mix colour's weight is how many of the draw's slots it holds. `scatterPixel` draws uniformly,
 // so repeating a pixel `weight` times is the entire implementation of the ratio — the alternative,
