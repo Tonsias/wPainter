@@ -28,6 +28,7 @@ import {
   scalePixelBuffer,
   stamp,
   stampOrigin,
+  type BrushShape,
   type MixColor,
   type Orientation,
   type PixelBuffer,
@@ -97,6 +98,7 @@ export function App() {
     { pixel: 5, weight: DEFAULT_MIX_WEIGHT },
   ])
   const [brushSize, setBrushSize] = useState(1)
+  const [brushShape, setBrushShape] = useState<BrushShape>('square')
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
   const [showGrid, setShowGrid] = useState(true)
@@ -288,6 +290,7 @@ export function App() {
     }
 
     const target: PixelBuffer = { pixels: layer.pixels, width: doc.width, height: doc.height }
+    const nib = { size: brushSize, shape: brushShape }
     if (tool === 'move') {
       const drag = moveRef.current
       const start = startRef.current
@@ -312,14 +315,14 @@ export function App() {
       )
     } else if (tool === 'scatter') {
       const from = lastRef.current ?? point
-      paintScatterLine(target, from.x, from.y, point.x, point.y, brushSize, mix, seedRef.current)
+      paintScatterLine(target, from.x, from.y, point.x, point.y, nib, mix, seedRef.current)
     } else if (tool === 'outline') {
       const from = lastRef.current ?? point
-      paintOutlineLine(target, from.x, from.y, point.x, point.y, brushSize, colorPixel, edgePixels)
+      paintOutlineLine(target, from.x, from.y, point.x, point.y, nib, colorPixel, edgePixels)
     } else {
       const from = lastRef.current ?? point
       const value = tool === 'eraser' ? EMPTY_PIXEL : colorPixel
-      paintLine(target, from.x, from.y, point.x, point.y, brushSize, value)
+      paintLine(target, from.x, from.y, point.x, point.y, nib, value)
     }
     lastRef.current = point
     // The pixel buffer was mutated in place; a fresh document object is what tells React.
@@ -440,10 +443,12 @@ export function App() {
       <Toolbar
         tool={tool}
         brushSize={brushSize}
+        brushShape={brushShape}
         canUndo={history.past.length > 0}
         canRedo={history.future.length > 0}
         onTool={pickTool}
         onBrushSize={setBrushSize}
+        onBrushShape={setBrushShape}
         onHistory={stepHistory}
         onImport={(file) => void importPng(file)}
         onImportLayer={(file) => void importPngLayer(file)}

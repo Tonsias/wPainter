@@ -38,6 +38,10 @@
   padding: 6px 0;
 }
 
+.segment--pair {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .toolbar__spacer {
   flex: 1;
   min-height: var(--space-2);

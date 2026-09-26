@@ -16,8 +16,11 @@ import {
   scalePixelBuffer,
   stamp,
   stampOrigin,
+  type Nib,
   type PixelBuffer,
 } from './paint.ts'
+
+const square = (size: number): Nib => ({ size, shape: 'square' })
 
 const buffer = (width: number, height: number, fill = 0): PixelBuffer => ({
   width,
@@ -28,21 +31,41 @@ const buffer = (width: number, height: number, fill = 0): PixelBuffer => ({
 describe('paintDot', () => {
   it('puts a size-1 nib exactly on the cursor', () => {
     const target = buffer(3, 3)
-    paintDot(target, 1, 1, 1, 7)
+    paintDot(target, 1, 1, square(1), 7)
     expect([...target.pixels]).toEqual([0, 0, 0, 0, 7, 0, 0, 0, 0])
   })
 
   it('centres an odd nib and clips it at the edges', () => {
     const target = buffer(3, 3)
-    paintDot(target, 0, 0, 3, 7)
+    paintDot(target, 0, 0, square(3), 7)
     expect([...target.pixels]).toEqual([7, 7, 0, 7, 7, 0, 0, 0, 0])
+  })
+
+  it('rounds a circle nib off: a plus at 3, a disc without corners at 5', () => {
+    const plus = buffer(3, 3)
+    paintDot(plus, 1, 1, { size: 3, shape: 'circle' }, 7)
+    expect([...plus.pixels]).toEqual([0, 7, 0, 7, 7, 7, 0, 7, 0])
+    const disc = buffer(5, 5)
+    paintDot(disc, 2, 2, { size: 5, shape: 'circle' }, 7)
+    expect([disc.pixels[0], disc.pixels[1], disc.pixels[2], disc.pixels[6]]).toEqual([0, 7, 7, 7])
+    expect([...disc.pixels].filter(Boolean)).toHaveLength(21)
+  })
+
+  it('draws the same single pixel and 2×2 block whatever the shape', () => {
+    for (const size of [1, 2]) {
+      const a = buffer(4, 4)
+      const b = buffer(4, 4)
+      paintDot(a, 1, 1, square(size), 7)
+      paintDot(b, 1, 1, { size, shape: 'circle' }, 7)
+      expect([...b.pixels]).toEqual([...a.pixels])
+    }
   })
 })
 
 describe('paintLine', () => {
   it('paints a connected run between two distant points', () => {
     const target = buffer(5, 5)
-    paintLine(target, 0, 0, 4, 4, 1, 3)
+    paintLine(target, 0, 0, 4, 4, square(1), 3)
     expect([...target.pixels].filter((value) => value === 3)).toHaveLength(5)
     expect(target.pixels[0]).toBe(3)
     expect(target.pixels[24]).toBe(3)
@@ -50,7 +73,7 @@ describe('paintLine', () => {
 
   it('paints a single dot when both ends coincide', () => {
     const target = buffer(3, 3)
-    paintLine(target, 1, 1, 1, 1, 1, 3)
+    paintLine(target, 1, 1, 1, 1, square(1), 3)
     expect([...target.pixels].filter(Boolean)).toHaveLength(1)
   })
 })
@@ -60,7 +83,7 @@ describe('scatter', () => {
 
   it('draws only colours the mix contains', () => {
     const target = buffer(8, 8)
-    paintScatterLine(target, 0, 0, 7, 7, 4, mix, 12345)
+    paintScatterLine(target, 0, 0, 7, 7, square(4), mix, 12345)
     const painted = [...target.pixels].filter((value) => value !== 0)
     expect(painted.length).toBeGreaterThan(0)
     expect(painted.every((value) => mix.includes(value))).toBe(true)
@@ -68,17 +91,17 @@ describe('scatter', () => {
 
   it('gives a pixel the same colour however often a stroke covers it', () => {
     const once = buffer(6, 6)
-    paintScatterLine(once, 3, 3, 3, 3, 3, mix, 99)
+    paintScatterLine(once, 3, 3, 3, 3, square(3), mix, 99)
     const twice = buffer(6, 6)
-    paintScatterLine(twice, 0, 3, 5, 3, 3, mix, 99)
+    paintScatterLine(twice, 0, 3, 5, 3, square(3), mix, 99)
     expect(twice.pixels[3 * 6 + 3]).toBe(once.pixels[3 * 6 + 3])
   })
 
   it('lands differently for a different seed', () => {
     const a = buffer(16, 16)
     const b = buffer(16, 16)
-    paintScatterLine(a, 0, 0, 15, 15, 8, mix, 1)
-    paintScatterLine(b, 0, 0, 15, 15, 8, mix, 2)
+    paintScatterLine(a, 0, 0, 15, 15, square(8), mix, 1)
+    paintScatterLine(b, 0, 0, 15, 15, square(8), mix, 2)
     expect([...a.pixels]).not.toEqual([...b.pixels])
   })
 
@@ -90,7 +113,7 @@ describe('scatter', () => {
 
   it('leaves the layer alone when the mix is empty', () => {
     const target = buffer(4, 4)
-    paintScatterLine(target, 0, 0, 3, 3, 2, [], 5)
+    paintScatterLine(target, 0, 0, 3, 3, square(2), [], 5)
     expect([...target.pixels].every((value) => value === 0)).toBe(true)
   })
 
@@ -169,50 +192,50 @@ describe('stampOrigin', () => {
 describe('paintOutlineLine', () => {
   it('rings a single dot with the edge colour', () => {
     const target = buffer(3, 3)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
+    paintOutlineLine(target, 1, 1, 1, 1, square(1), 7, [4])
     expect([...target.pixels]).toEqual([4, 4, 4, 4, 7, 4, 4, 4, 4])
   })
 
   it('keeps the fill unbroken along a dragged stroke', () => {
     const target = buffer(5, 3)
-    paintOutlineLine(target, 1, 1, 3, 1, 1, 7, [4])
+    paintOutlineLine(target, 1, 1, 3, 1, square(1), 7, [4])
     expect([...target.pixels]).toEqual([4, 4, 4, 4, 4, 4, 7, 7, 7, 4, 4, 4, 4, 4, 4])
   })
 
   it('never lets the edge overwrite fill that is already down', () => {
     const target = buffer(3, 3, 7)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
+    paintOutlineLine(target, 1, 1, 1, 1, square(1), 7, [4])
     expect([...target.pixels]).toEqual([7, 7, 7, 7, 7, 7, 7, 7, 7])
   })
 
   it('lets the fill overwrite anything, edge colour included', () => {
     const target = buffer(3, 3, 4)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [4])
+    paintOutlineLine(target, 1, 1, 1, 1, square(1), 7, [4])
     expect(target.pixels[4]).toBe(7)
   })
 
   it('paints one ring per colour, outwards from the fill', () => {
     const target = buffer(7, 7)
-    paintOutlineLine(target, 3, 3, 3, 3, 1, 7, [4, 5, 6])
+    paintOutlineLine(target, 3, 3, 3, 3, square(1), 7, [4, 5, 6])
     expect([...target.pixels.slice(21, 28)]).toEqual([6, 5, 4, 7, 4, 5, 6])
     expect([...target.pixels.slice(0, 7)]).toEqual([6, 6, 6, 6, 6, 6, 6])
   })
 
   it('drops the colours past the fourth', () => {
     const target = buffer(13, 13)
-    paintOutlineLine(target, 6, 6, 6, 6, 1, 7, [1, 2, 3, 4, 5])
+    paintOutlineLine(target, 6, 6, 6, 6, square(1), 7, [1, 2, 3, 4, 5])
     expect([...target.pixels.slice(78, 91)]).toEqual([0, 0, 4, 3, 2, 1, 7, 1, 2, 3, 4, 0, 0])
   })
 
   it('keeps an outer ring off the inner rings the stroke already laid down', () => {
     const target = buffer(9, 5)
-    paintOutlineLine(target, 2, 2, 6, 2, 1, 7, [4, 5])
+    paintOutlineLine(target, 2, 2, 6, 2, square(1), 7, [4, 5])
     expect([...target.pixels.slice(18, 27)]).toEqual([5, 4, 7, 7, 7, 7, 7, 4, 5])
   })
 
   it('paints a plain line when no edge colour is picked', () => {
     const target = buffer(3, 3)
-    paintOutlineLine(target, 1, 1, 1, 1, 1, 7, [])
+    paintOutlineLine(target, 1, 1, 1, 1, square(1), 7, [])
     expect([...target.pixels]).toEqual([0, 0, 0, 0, 7, 0, 0, 0, 0])
   })
 })

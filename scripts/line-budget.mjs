@@ -26,11 +26,12 @@ const CEILINGS = new Map([
   // rather than an icon package pulled in for them. The scatter mix then became a weighted set,
   // so the shell carries the weights and the handler that moves them as well as the colours.
   // Brush size and stamp scale then became typed numbers, through one field that keeps the text
-  // apart from the committed value and a tested parser behind it.
+  // apart from the committed value and a tested parser behind it. The brush then got a shape
+  // toggle under the size, with an icon per shape.
   [
     'ui',
     {
-      ceiling: 1880,
+      ceiling: 1920,
       reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set, a number field',
     },
   ],
@@ -39,9 +40,10 @@ const CEILINGS = new Map([
   // stroke is most of what the extra lines are, and it is all tested.
   // The stamp then grew a ring of its own: a flood outwards from every painted pixel onto a
   // buffer grown to hold it, which is a different shape from the brush's nib-per-step rings.
+  // The nib then became a size plus a shape, square or circle, and the tests that pin the circle.
   [
     'document',
-    { ceiling: 1400, reason: 'the outline brush rings, the stamp ring, and the tests that pin them' },
+    { ceiling: 1420, reason: 'the outline brush rings, the stamp ring, and the tests that pin them' },
   ],
 ]);
 
@@ -60,7 +62,8 @@ const DEFAULT_CEILING = 1200;
 // scatter mix's per-colour ratio: a weight beside every picked colour, the slider that sets it,
 // and the draw the weights expand into. Raised once more for a ring around a stamped sprite,
 // which is the same edge colours the outline brush uses grown around the sprite's own shape.
-const TOTAL_CEILING = 4680;
+// Raised once more for typed brush size and stamp scale and a round brush beside the square one.
+const TOTAL_CEILING = 4760;
 
 function listSourceFiles(dir) {
   const out = [];

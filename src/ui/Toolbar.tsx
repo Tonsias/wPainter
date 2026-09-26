@@ -1,15 +1,18 @@
 import './Toolbar.css'
 import { Icon, type IconName } from './icons.tsx'
 import { NumberField } from './NumberField.tsx'
+import { BRUSH_SHAPES, type BrushShape } from '../document/paint.ts'
 import { MAX_BRUSH_SIZE, TOOLS, TOOL_KEY, TOOL_LABELS, type Tool } from './tools.ts'
 
 type Props = {
   tool: Tool
   brushSize: number
+  brushShape: BrushShape
   canUndo: boolean
   canRedo: boolean
   onTool: (tool: Tool) => void
   onBrushSize: (size: number) => void
+  onBrushShape: (shape: BrushShape) => void
   onHistory: (direction: 'undo' | 'redo') => void
   onImport: (file: File) => void
   onImportLayer: (file: File) => void
@@ -41,10 +44,12 @@ function FileButton({ icon, label, onPick }: FileButtonProps) {
 export function Toolbar({
   tool,
   brushSize,
+  brushShape,
   canUndo,
   canRedo,
   onTool,
   onBrushSize,
+  onBrushShape,
   onHistory,
   onImport,
   onImportLayer,
@@ -83,6 +88,24 @@ export function Toolbar({
         max={MAX_BRUSH_SIZE}
         onChange={onBrushSize}
       />
+
+      <div className="segment segment--grid segment--pair">
+        {BRUSH_SHAPES.map((option) => {
+          const label = option === 'square' ? 'Square brush' : 'Round brush'
+          return (
+            <button
+              key={option}
+              type="button"
+              title={label}
+              aria-label={label}
+              className={`segment__option${option === brushShape ? ' segment__option--active' : ''}`}
+              onClick={() => onBrushShape(option)}
+            >
+              <Icon name={option} />
+            </button>
+          )
+        })}
+      </div>
 
       <span className="toolbar__spacer" />
 

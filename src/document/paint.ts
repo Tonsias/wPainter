@@ -78,21 +78,34 @@ export function orientPixelBuffer(source: PixelBuffer, orientation: Orientation)
   return { pixels, width, height }
 }
 
-// The clipped span of a nib of `size` centred on (x, y) — the bounds arithmetic every dot shares.
+export const BRUSH_SHAPES = ['square', 'circle'] as const
+export type BrushShape = (typeof BRUSH_SHAPES)[number]
+
+export type Nib = {
+  readonly size: number
+  readonly shape: BrushShape
+}
+
+// The clipped span of a nib centred on (x, y) — the bounds arithmetic every dot shares. The circle
+// keeps a cell whose centre lies within a radius a quarter pixel short of half the size: the full
+// half turns 3 back into a square, while this gives a plus at 3 and a round disc from 4 up.
 function eachDotPixel(
   target: PixelBuffer,
   x: number,
   y: number,
-  size: number,
+  { size, shape }: Nib,
   visit: (index: number, px: number, py: number) => void,
 ) {
   const start = -Math.floor((size - 1) / 2)
+  const centre = (size - 1) / 2
+  const radius = (size / 2 - 0.25) ** 2
   for (let dy = 0; dy < size; dy += 1) {
     const py = y + start + dy
     if (py < 0 || py >= target.height) continue
     for (let dx = 0; dx < size; dx += 1) {
       const px = x + start + dx
       if (px < 0 || px >= target.width) continue
+      if (shape === 'circle' && (dx - centre) ** 2 + (dy - centre) ** 2 > radius) continue
       visit(py * target.width + px, px, py)
     }
   }
@@ -102,11 +115,11 @@ export function paintDot(
   target: PixelBuffer,
   x: number,
   y: number,
-  size: number,
+  nib: Nib,
   value: number,
   protect?: readonly number[],
 ) {
-  eachDotPixel(target, x, y, size, (index) => {
+  eachDotPixel(target, x, y, nib, (index) => {
     if (protect?.includes(target.pixels[index])) return
     target.pixels[index] = value
   })
@@ -155,13 +168,13 @@ export function paintScatterLine(
   fromY: number,
   toX: number,
   toY: number,
-  size: number,
+  nib: Nib,
   mix: readonly number[],
   seed: number,
 ) {
   if (mix.length === 0) return
   walkLine(fromX, fromY, toX, toY, (x, y) => {
-    eachDotPixel(target, x, y, size, (index, px, py) => {
+    eachDotPixel(target, x, y, nib, (index, px, py) => {
       target.pixels[index] = scatterPixel(seed, px, py, mix)
     })
   })
@@ -202,10 +215,10 @@ export function paintLine(
   fromY: number,
   toX: number,
   toY: number,
-  size: number,
+  nib: Nib,
   value: number,
 ) {
-  walkLine(fromX, fromY, toX, toY, (x, y) => paintDot(target, x, y, size, value))
+  walkLine(fromX, fromY, toX, toY, (x, y) => paintDot(target, x, y, nib, value))
 }
 
 export const MAX_OUTLINE_COLORS = 4
@@ -220,20 +233,20 @@ export function paintOutlineLine(
   fromY: number,
   toX: number,
   toY: number,
-  size: number,
+  nib: Nib,
   fill: number,
   edges: readonly number[],
 ) {
   const rings = edges.slice(0, MAX_OUTLINE_COLORS).map((value, index) => ({
     value,
-    size: size + 2 * (index + 1),
+    nib: { ...nib, size: nib.size + 2 * (index + 1) },
     inside: [fill, ...edges.slice(0, index)],
   }))
   walkLine(fromX, fromY, toX, toY, (x, y) => {
     for (let index = rings.length - 1; index >= 0; index -= 1) {
-      paintDot(target, x, y, rings[index].size, rings[index].value, rings[index].inside)
+      paintDot(target, x, y, rings[index].nib, rings[index].value, rings[index].inside)
     }
-    paintDot(target, x, y, size, fill)
+    paintDot(target, x, y, nib, fill)
   })
 }
 
