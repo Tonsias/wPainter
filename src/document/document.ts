@@ -1,3 +1,5 @@
+import { EMPTY_PIXEL } from '../palette/wplace.ts'
+
 type Layer = {
   readonly id: string
   readonly name: string
@@ -35,6 +37,16 @@ export function cloneDocument(doc: PaintDocument): PaintDocument {
 
 export function activeLayer(doc: PaintDocument): Layer | undefined {
   return doc.layers.find((layer) => layer.id === doc.activeLayerId)
+}
+
+// What the canvas shows at (x, y): the topmost visible layer that has paint there, if any.
+export function topPixel(doc: PaintDocument, x: number, y: number): number {
+  const index = y * doc.width + x
+  for (let layer = doc.layers.length - 1; layer >= 0; layer -= 1) {
+    const { visible, pixels } = doc.layers[layer]
+    if (visible && pixels[index] !== EMPTY_PIXEL) return pixels[index]
+  }
+  return EMPTY_PIXEL
 }
 
 export function nextLayerName(doc: PaintDocument): string {

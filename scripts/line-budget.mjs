@@ -62,8 +62,9 @@ const DEFAULT_CEILING = 1200;
 // scatter mix's per-colour ratio: a weight beside every picked colour, the slider that sets it,
 // and the draw the weights expand into. Raised once more for a ring around a stamped sprite,
 // which is the same edge colours the outline brush uses grown around the sprite's own shape.
-// Raised once more for typed brush size and stamp scale and a round brush beside the square one.
-const TOTAL_CEILING = 4760;
+// Raised once more for typed brush size and stamp scale and a round brush beside the square one,
+// and for a picker that reads through the layer stack instead of the active layer alone.
+const TOTAL_CEILING = 4800;
 
 function listSourceFiles(dir) {
   const out = [];

@@ -10,6 +10,7 @@ import {
   createDocument,
   createLayer,
   resizeDocument,
+  topPixel,
   type PaintDocument,
 } from '../document/document.ts'
 import { EMPTY_HISTORY, commit, redo, undo, type History } from '../document/history.ts'
@@ -255,16 +256,18 @@ export function App() {
       return
     }
 
-    const layer = activeLayer(doc)
-    if (!layer || !layer.visible) return
     const inside = point.x >= 0 && point.y >= 0 && point.x < doc.width && point.y < doc.height
 
+    // Picks what the canvas shows, across every visible layer, so it ignores which one is active.
     if (tool === 'picker') {
       if (!inside) return
-      const value = layer.pixels[point.y * doc.width + point.x]
+      const value = topPixel(doc, point.x, point.y)
       if (value !== EMPTY_PIXEL) setColorPixel(remap[value])
       return
     }
+
+    const layer = activeLayer(doc)
+    if (!layer || !layer.visible) return
 
     // An empty mix would otherwise cost an undo step for a stroke that changed nothing.
     if (tool === 'scatter' && mix.length === 0) return

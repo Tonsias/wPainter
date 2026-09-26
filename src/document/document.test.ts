@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createLayer, moveLayer, renameLayer, type PaintDocument } from './document.ts'
+import { createLayer, moveLayer, renameLayer, topPixel, type PaintDocument } from './document.ts'
 
 const docOf = (...names: readonly string[]): PaintDocument => {
   const layers = names.map((name) => createLayer(name, 1, 1))
@@ -38,5 +38,22 @@ describe('renameLayer', () => {
   it('keeps the old name when the draft is blank', () => {
     const doc = docOf('a')
     expect(renameLayer(doc, doc.layers[0].id, '   ')).toBe(doc)
+  })
+})
+
+describe('topPixel', () => {
+  it('reads the topmost visible layer with paint, looking through holes and hidden layers', () => {
+    const [bottom, middle, top] = docOf('bottom', 'middle', 'top').layers
+    bottom.pixels[0] = 3
+    middle.pixels[0] = 5
+    const doc: PaintDocument = {
+      width: 1,
+      height: 1,
+      layers: [bottom, middle, top],
+      activeLayerId: bottom.id,
+    }
+    expect(topPixel(doc, 0, 0)).toBe(5)
+    expect(topPixel({ ...doc, layers: [bottom, { ...middle, visible: false }, top] }, 0, 0)).toBe(3)
+    expect(topPixel({ ...doc, layers: [top] }, 0, 0)).toBe(0)
   })
 })
