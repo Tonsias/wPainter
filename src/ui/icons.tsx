@@ -45,13 +45,3 @@ export function Icon({ name }: { name: IconName }) {
     </svg>
   )
 }
-
-// The brush sizes are the one control whose value *is* a size, so the swatch is the size: a dot
-// the brush's own width rather than a glyph standing in for it.
-export function BrushDot({ size }: { size: number }) {
-  return (
-    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r={1.8 + size} fill="currentColor" />
-    </svg>
-  )
-}

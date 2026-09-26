@@ -38,7 +38,7 @@ import { quantizeRgba, remapPixels, remapTable } from '../palette/quantize.ts'
 import { EMPTY_PIXEL, FREE_COLOR_COUNT, WPLACE_COLORS } from '../palette/wplace.ts'
 import { SpritePanel } from '../sprites/SpritePanel.tsx'
 import { indexSprites, loadSpriteImage } from '../sprites/loadSprites.ts'
-import type { Sprite, SpriteScale } from '../sprites/library.ts'
+import type { Sprite } from '../sprites/library.ts'
 import { PaintCanvas, type Point } from './PaintCanvas.tsx'
 import {
   DEFAULT_PANEL_WIDTH,
@@ -47,7 +47,7 @@ import {
   clampPanelWidth,
 } from './panel.ts'
 import { Toolbar } from './Toolbar.tsx'
-import { TOOL_KEYS, type BrushSize, type Tool } from './tools.ts'
+import { TOOL_KEYS, type Tool } from './tools.ts'
 import { ZOOMS, fitZoom, type Zoom } from './zoom.ts'
 
 const DEFAULT_SIZE = 128
@@ -96,7 +96,7 @@ export function App() {
     { pixel: 3, weight: DEFAULT_MIX_WEIGHT },
     { pixel: 5, weight: DEFAULT_MIX_WEIGHT },
   ])
-  const [brushSize, setBrushSize] = useState<BrushSize>(1)
+  const [brushSize, setBrushSize] = useState(1)
   const [freeOnly, setFreeOnly] = useState(false)
   const [zoom, setZoom] = useState<Zoom>(4)
   const [showGrid, setShowGrid] = useState(true)
@@ -105,7 +105,8 @@ export function App() {
   const [sprites, setSprites] = useState<readonly Sprite[]>([])
   const [spriteId, setSpriteId] = useState<string | null>(null)
   const [spriteImage, setSpriteImage] = useState<PixelBuffer | null>(null)
-  const [spriteScale, setSpriteScale] = useState<SpriteScale>(1)
+  // Percent, as the field shows it; the factor only exists at the one place that scales.
+  const [spriteScale, setSpriteScale] = useState(100)
   const [spriteOrientation, setSpriteOrientation] = useState<Orientation>(UNTURNED)
   const [spriteOutlined, setSpriteOutlined] = useState(false)
   const [spritesSkipped, setSpritesSkipped] = useState(0)
@@ -207,7 +208,7 @@ export function App() {
             { ...spriteImage, pixels: remapPixels(spriteImage.pixels, remap) },
             spriteOrientation,
           ),
-          spriteScale,
+          spriteScale / 100,
         ),
         spriteOutlined ? edgePixels.map((pixel) => remap[pixel]) : [],
       ),

@@ -287,6 +287,32 @@ details[open] > .app__panel-title .app__caret {
   cursor: pointer;
 }
 
+/* A labelled number with its unit, for the settings that are a count rather than a pick. */
+.number-field {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+}
+
+.number-field input {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 8px;
+}
+
+.number-field__unit {
+  flex: none;
+}
+
 .app__size {
   display: flex;
   gap: 6px;

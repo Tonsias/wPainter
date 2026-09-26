@@ -25,11 +25,13 @@ const CEILINGS = new Map([
   // its words: every control in it is an icon now, and the drawings are path data kept here
   // rather than an icon package pulled in for them. The scatter mix then became a weighted set,
   // so the shell carries the weights and the handler that moves them as well as the colours.
+  // Brush size and stamp scale then became typed numbers, through one field that keeps the text
+  // apart from the committed value and a tested parser behind it.
   [
     'ui',
     {
-      ceiling: 1820,
-      reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set',
+      ceiling: 1880,
+      reason: 'canvas host, a resizable panel, folding sections, two imports, a hand-drawn icon set, a number field',
     },
   ],
   // The outline brush turned its one edge colour into up to four rings painted outwards, each

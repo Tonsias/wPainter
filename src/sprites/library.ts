@@ -7,17 +7,9 @@ export type Sprite = {
   readonly file: File
 }
 
-// Nearest-neighbour factors, so an up-scale stays on whole source pixels; the ones below 1 are
-// there for a sprite that arrives larger than the template it has to fit into. A sixth and a third
-// are spelled out rather than written `1 / 6`, because `as const` keeps a literal literal but not
-// an expression.
-export const SPRITE_SCALES = [
-  0.16666666666666666, 0.2, 0.25, 0.3333333333333333, 0.5, 1, 2, 3, 4, 6, 8,
-] as const
-export type SpriteScale = (typeof SPRITE_SCALES)[number]
-
-export const spriteScaleLabel = (scale: SpriteScale): string =>
-  scale < 1 ? `1/${Math.round(1 / scale)}` : `${scale}×`
+// In percent of the source. Nearest neighbour only stays on whole source pixels at whole
+// multiples; below 100 is for a sprite that arrives larger than the template it has to fit into.
+export const MAX_SPRITE_SCALE = 1000
 
 // The picked directory itself is the root: its `path` and `name` are empty, and only its
 // children carry a folder name.

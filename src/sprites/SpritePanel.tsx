@@ -8,15 +8,14 @@ import {
   type Orientation,
 } from '../document/paint.ts'
 import {
-  SPRITE_SCALES,
+  MAX_SPRITE_SCALE,
   buildSpriteTree,
   countSprites,
   matchesQuery,
-  spriteScaleLabel,
   type Sprite,
   type SpriteNode,
-  type SpriteScale,
 } from './library.ts'
+import { NumberField } from '../ui/NumberField.tsx'
 import { loadSpriteImage, type SpriteFile } from './loadSprites.ts'
 import {
   askFolderAccess,
@@ -33,12 +32,13 @@ type Props = {
   sprites: readonly Sprite[]
   activeId: string | null
   skipped: number
-  scale: SpriteScale
+  // Percent of the source sprite.
+  scale: number
   orientation: Orientation
   outlined: boolean
   onLoad: (files: SpriteFile[]) => void
   onPick: (sprite: Sprite) => void
-  onScale: (scale: SpriteScale) => void
+  onScale: (scale: number) => void
   onOrient: (orientation: Orientation) => void
   onOutline: (outlined: boolean) => void
 }
@@ -294,19 +294,14 @@ export function SpritePanel({
       </div>
       {/* Outside the scroller on purpose: the scale a stamp is laid down at has to stay readable
           and reachable however far into the tree the list has been scrolled. */}
-      <div className="segment sprites__scale">
-        {SPRITE_SCALES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            title={`Stamp at ${Math.round(option * 100)}%`}
-            className={`segment__option${option === scale ? ' segment__option--active' : ''}`}
-            onClick={() => onScale(option)}
-          >
-            {spriteScaleLabel(option)}
-          </button>
-        ))}
-      </div>
+      <NumberField
+        label="Stamp scale"
+        unit="%"
+        value={scale}
+        min={1}
+        max={MAX_SPRITE_SCALE}
+        onChange={onScale}
+      />
       {/* Actions rather than modes: each press turns or mirrors what the stamp already shows, so
           the three compose and a fourth turn is the way back. The reset only appears once there
           is something to reset, which is also the only sign the panel gives that a stamp is

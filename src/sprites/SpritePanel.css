@@ -52,18 +52,6 @@
    narrower than the stage bar the zoom segment lives in. Past the narrowest panel they no longer
    do on one line, so this is the one segment that wraps — and a pill end on a two-row box reads
    as a mistake, hence the flat radius. */
-.sprites__scale {
-  flex-wrap: wrap;
-  border-radius: var(--radius-md);
-}
-
-.sprites__scale .segment__option {
-  min-width: 30px;
-  flex: 1;
-  padding: 0 4px;
-  font-size: 11px;
-}
-
 .sprites__orient {
   display: flex;
   gap: var(--space-2);

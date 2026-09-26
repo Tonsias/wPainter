@@ -1,14 +1,15 @@
 import './Toolbar.css'
-import { Icon, BrushDot, type IconName } from './icons.tsx'
-import { BRUSH_SIZES, TOOLS, TOOL_KEY, TOOL_LABELS, type BrushSize, type Tool } from './tools.ts'
+import { Icon, type IconName } from './icons.tsx'
+import { NumberField } from './NumberField.tsx'
+import { MAX_BRUSH_SIZE, TOOLS, TOOL_KEY, TOOL_LABELS, type Tool } from './tools.ts'
 
 type Props = {
   tool: Tool
-  brushSize: BrushSize
+  brushSize: number
   canUndo: boolean
   canRedo: boolean
   onTool: (tool: Tool) => void
-  onBrushSize: (size: BrushSize) => void
+  onBrushSize: (size: number) => void
   onHistory: (direction: 'undo' | 'redo') => void
   onImport: (file: File) => void
   onImportLayer: (file: File) => void
@@ -74,20 +75,14 @@ export function Toolbar({
         })}
       </div>
 
-      <div className="segment segment--grid">
-        {BRUSH_SIZES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            title={`Brush ${option} px`}
-            aria-label={`Brush ${option} px`}
-            className={`segment__option${option === brushSize ? ' segment__option--active' : ''}`}
-            onClick={() => onBrushSize(option)}
-          >
-            <BrushDot size={option} />
-          </button>
-        ))}
-      </div>
+      <NumberField
+        label="Brush size"
+        unit="px"
+        value={brushSize}
+        min={1}
+        max={MAX_BRUSH_SIZE}
+        onChange={onBrushSize}
+      />
 
       <span className="toolbar__spacer" />
 
